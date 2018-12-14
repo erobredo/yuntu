@@ -1,8 +1,65 @@
 
-import dataframe
+from core import dataframe
+from core.collections import audioCollection
 import numpy as np
 
-#Functions
+
+class Soundscape(object):
+    def __init__(self,name,data,timeStep=60,freqStep=100,flimits=None,channel=None,n_fft=1024,hop_length=512,mongoDict=None,metadataParse=None):
+        self.name = name
+        self.timeStep = timeStep
+        self.freqStep = freqStep
+        self.n_fft=n_ftt 
+        self.hop_length=hop_length
+        self.channel = channel
+
+        if isinstance(data,audioCollection):
+            self.collection = data
+        else:
+            self.collection = audioCollection(name=name+"_collection",data=data,mongoDict=mongoDict,metadataParse=metadataParse)
+
+        self.initDataFrame()
+
+
+    def initDataFrame(self):
+        energySamples = []
+        for akey in self.collection.data.keys():
+            audio = self.collection.data[akey]
+
+            if self.channel is None:
+                channels = range(audio.nchannels)
+            else:
+                channels = [self.channel]
+
+            for ch in channels:
+                energies = energySteps(audio,tstep=self.timeStep,fstep=self.freqStep,flimits=self.flimits,channel=ch,n_fft=self.n_fft,hop_length=self.hop_length)
+                for e in energies:
+                    e["akey"] = akey
+                    for mkey in audio.metadata.keys():
+                        e[mkey] = audio.metadata[mkey]
+
+                    energySamples.append(e)
+
+        self.soundscapeDataFrame = dataframe.fromArray(energySamples)
+
+
+
+    def getDataFrame(self,condition=True):
+        return self.soundscapeDataFrame[condition]
+
+    def sum(self,groupBy,condition=True):
+        return energySum(self.soundscapeDataFrame,groupBy,condition)
+
+    def mean(self,groupBy,condition=True):
+        return energyMean(self.soundscapeDataFrame,groupBy,condition)
+
+    def var(self,groupBy,condition=True):
+        return energyVar(self.soundscapeDataFrame,groupBy,condition)
+
+    def std(self,groupBy,condition=True):
+        return energyStd(self.soundscapeDataFrame,groupBy,condition)
+
+
 
 def energySteps(audio,tstep,fstep,flimits=None,channel=0,n_fft=1024,hop_length=512,norm=True):
     audio.unset_mask()
@@ -79,72 +136,4 @@ def energyStd(sdf,groupBy,condition=True):
 def ADI(sdf,condition):
     df = dataframe.vectorApply(sdf,target="energy",map_func=shannon,condition=condition)
     return df
-
-#def AEI(sdf,condition):
-#    df = dataframe.vectorApply(sdf,target="energy",func=gini,condition=condition)
-#    return df
-
-#classes
-class Soundscape(object):
-    def __init__(self,name,data,timeStep=60,freqStep=100,flimits=None, channel=None, n_fft=1024, hop_length=512):
-        self.name = name
-        self.data = data
-        self.timeStep = timeStep
-        self.freqStep = freqStep
-        self.n_fft=n_ftt 
-        self.hop_length=hop_length
-        self.channel = channel
-
-        self.initDataFrame()
-
-    def initDataFrame(self):
-        if isinstance(self.data, list):
-            data = {}
-            for i in range(len(self.data)):
-                data[i] = self.data[i]
-
-        self.data = data
-
-        energySamples = []
-        for akey in self.data.keys():
-            audio = self.data[akey]
-
-            if self.channel is None:
-                channels = range(audio.nchannels)
-            else:
-                channels = [self.channel]
-
-            for ch in channels:
-                energies = energySteps(audio,tstep=self.timeStep,fstep=self.freqStep,flimits=self.flimits,channel=ch,n_fft=self.n_fft,hop_length=self.hop_length)
-                for e in energies:
-                    e["akey"] = akey
-                    for mkey in audio.metadata.keys():
-                        e[mkey] = audio.metadata[mkey]
-
-                    energySamples.append(e)
-
-        self.dataFrame = dataframe.fromArray(energySamples)
-
-
-
-    def getDataFrame(self,condition=True):
-        return self.dataFrame[condition]
-
-    def sum(self,groupBy,condition=True):
-        return energySum(self.dataFrame,groupBy,condition)
-
-    def mean(self,groupBy,condition=True):
-        return energyMean(self.dataFrame,groupBy,condition)
-
-    def var(self,groupBy,condition=True):
-        return energyVar(self.dataFrame,groupBy,condition)
-
-    def std(self,groupBy,condition=True):
-        return energyStd(self.dataframe,groupBy,condition)
-
-
-
-
-
-
 

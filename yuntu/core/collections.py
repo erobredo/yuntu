@@ -1,8 +1,7 @@
 from abc import abstractmethod, ABCMeta
 import dataframe
-from soundscape import Soundscape
 
-class mediaCollection(object):
+class mediaColleSction(object):
     __metaclass__ = ABCMeta
 
     @property
@@ -36,20 +35,19 @@ class mediaCollection(object):
 class audioCollection(mediaCollection):
     __metaclass__ = ABCMeta
 
-    def __init__(self,name,data=None,mongoDict=None):
-        self.timeStep = timeStep
-        self.freqStep = freqStep
+    def __init__(self,name,data=None,mongoDict=None,metadataParse=None):
         self.name = name
         self.data = data
         self.mongoDict = mongoDict
+        self.metadataParse = metadataParse
 
         self.initDataframe()
 
     def initDataframe(self):
         if self.data is not None:
-            self.data, self.dataFrame = dataframe.fromAudioArray(self.data)
+            self.data, self.dataFrame = dataframe.fromAudioArray(self.data,self.metadataParse)
         elif self.mongoDict is not None:
-            self.data, self.dataFrame = dataframe.fromAudioMongoQuery(self.mongoDict)
+            self.data, self.dataFrame = dataframe.fromMongoQuery(self.mongoDict,self.metadataParse)
         else:
             raise ValueError("Variable 'data' is None but no other data source supplied.")
 
@@ -73,12 +71,10 @@ class audioCollection(mediaCollection):
             del self.data[key]
 
     def upsertMedia(self,arr):
-        upserted, self.dataFrame = dataframe.upsertData(self.dataFrame,arr)
+        upserted, self.dataFrame = dataframe.upsertData(self.dataFrame,arr,self.metadata)
         for key in upserted:
             self.data[key] = upserted[key]
 
-    def getSoundscape(self,timeStep=60, freqStep=100, flimits=None, channel=None, n_fft=1024, hop_length=512):
-        return Soundscape(self.name+"_soundscape",self.data,timeStep,freqStep,flimits,channel,n_fft,hop_length)
 
 
 

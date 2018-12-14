@@ -1,0 +1,6 @@
+- Add support for large time steps
+- Add methods to persist results and configurations
+- Add methods for soundscape operations (merge, split, squared diff, etc)
+- Add methods for collections operations
+- Add plotting methods
+- Add analysis module (glmm,dl, etc.)

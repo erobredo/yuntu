@@ -1,27 +1,18 @@
 import pandas as pd
-from audio_io.baseaudio import Audio
-from audio_io.utils import binaryMD5
+from audio import Audio
+from utils import binaryMD5
 
-
-def preprocMetadata(metadata,tfields=None):
-    if tfields is None:
-        return metadata
-    else:
-        clean_metadata = {}
-        for field in tfields:
-            if field in metadata:
-                clean_metadata[field] = metadata[field]
-            else:
-                clean_metadata[field] = None
-
-        return clean_metadata
-        
-def indexAudio(audioArr,tfields=None):
+def indexAudio(audioArr,metadataParse=None):
     data = {}
     dictArr = []
     for i in range(audioArr):
         audio = audioArr[i]
-        metadata = preprocMetadata(audio.metadata,tfields)
+
+        if metadataParse is not None:
+            metadata = metadataParse(audio.metadata)
+        else:
+            metadata = audio.metadata
+
         md5 = binaryMD5(audio.path)
         metadata["akey"] = md5
         audio.set_metadata(metadata)
@@ -33,11 +24,11 @@ def indexAudio(audioArr,tfields=None):
 def fromArray(dictArr):
     return pd.DataFrame.from_dict(dictArr)
 
-def fromAudioArray(audioArr,tfields=None):
-    data, dictArr = indexAudio(audioArr,tfields)
+def fromAudioArray(audioArr,metadataParse=None):
+    data, dictArr = indexAudio(audioArr,metadataParse)
     return data, fromArray(dictArr)
 
-def fromAudioMongoQuery(mongoDict,tfields,pathField="path",timeexpField=None):
+def fromMongoQuery(mongoDict,metadataParse,pathField="path",timeexpField=None):
     audioArr = []
     for metadata in collection.find(query):
         if "media_info" in metadata:
@@ -62,9 +53,8 @@ def dropData(df,condition):
     df = df[~df["akey"].isin(indArr)]
     return df, indArr
 
-def upsertData(df,audioArr):
-    tfields = list(df.columns.values).remove("akey")
-    dictArr, data = indexAudio(audioArr,tfields)
+def upsertData(df,audioArr,metadataParse=None):
+    dictArr, data = indexAudio(audioArr,metadataParse)
     return data, df.append(dictArr)
 
 def vectorGroupBy(df,target,agg_func,groupBy,condition=True):
