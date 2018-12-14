@@ -1,4 +1,6 @@
 import pandas as pd
+from pymongo import MongoClient
+from bson.objectid import ObjectId
 from audio import Audio
 from utils import binaryMD5
 
@@ -29,6 +31,10 @@ def fromAudioArray(audioArr,metadataParse=None):
     return data, fromArray(dictArr)
 
 def fromMongoQuery(mongoDict,metadataParse,pathField="path",timeexpField=None):
+    client=MongoClient(mongoDict["host"],maxPoolSize = 30)
+    mongoDb = client[mongoDict["db"]]
+    collection = mongoDb[mongoDict["collection"]]
+
     audioArr = []
     for metadata in collection.find(query):
         if "media_info" in metadata:

@@ -1,17 +1,17 @@
 from abc import abstractmethod, ABCMeta
 import dataframe
 
-class mediaColleSction(object):
+class mediaCollection(object):
     __metaclass__ = ABCMeta
 
     @property
     @abstractmethod
-    def name(self)
+    def name(self):
         pass
 
     @property
     @abstractmethod
-    def dataFrame(self)
+    def dataFrame(self):
         pass
 
     @abstractmethod
