@@ -4,16 +4,6 @@ import dataframe
 class mediaCollection(object):
     __metaclass__ = ABCMeta
 
-    @property
-    @abstractmethod
-    def name(self):
-        pass
-
-    @property
-    @abstractmethod
-    def dataFrame(self):
-        pass
-
     @abstractmethod
     def initDataframe(self,index):
         pass
@@ -40,6 +30,7 @@ class audioCollection(mediaCollection):
         self.data = data
         self.mongoDict = mongoDict
         self.metadataParse = metadataParse
+        self.size = 0
 
         self.initDataframe()
 
@@ -51,8 +42,14 @@ class audioCollection(mediaCollection):
         else:
             raise ValueError("Variable 'data' is None but no other data source supplied.")
 
-    def getDataFrame(self,condition=True):
-        return self.dataFrame[condition]
+        self.size = len(self.data.keys())
+
+
+    def getDataFrame(self,condition=None):
+        if condition is None:
+            return self.dataFrame
+        else:
+            return self.dataFrame[condition]
 
     def setSamplingResolution(self,timeStep=None,freqStep=None):
         if timeStep is not None:
@@ -61,11 +58,15 @@ class audioCollection(mediaCollection):
             self.freqStep = freqStep
 
 
-    def getMedia(self,condition=True):
-        indArr = list(self.dataFrame[condition]["akey"])
-        return [self.data[key] for key in keyArr]
+    def getMedia(self,condition=None):
+        if condition is None:
+            indArr =  list(self.dataFrame["akey"])
+        else:
+            indArr = list(self.dataFrame[condition]["akey"])
 
-    def dropMedia(self,condition=True):
+        return [self.data[key] for key in indArr]
+
+    def dropMedia(self,condition=None):
         self.dataFrame, keyArr = dataframe.dropData(self.dataFrame,condition)
         for key in keyArr:
             del self.data[key]

@@ -69,7 +69,7 @@ class Audio(Media):
         self.read_sr = sr
         self.clear_media()
     
-    def set_metadata(metadata):
+    def set_metadata(self,metadata):
         self.metadata = metadata
         
     def set_mask(self,startTime,endTime):
@@ -107,8 +107,8 @@ class Audio(Media):
 
         sig = self.get_signal()
 
-        if self.nchannels > 1:
-            sig = sig[[channel],:]
+        sig = utils.sigChannel(sig,channel,self.nchannels)
+
         
         return utils.zero_crossing_rate(sig,frame_length,hop_length)       
 
@@ -118,8 +118,8 @@ class Audio(Media):
 
         sig = self.get_signal()
 
-        if self.nchannels > 1:
-            sig = sig[[channel],:]
+        sig = utils.sigChannel(sig,channel,self.nchannels)
+
 
         return utils.spectrogram(sig,n_fft=n_fft,hop_length=hop_length), utils.spec_frequencies(self.sr,n_fft)
 
@@ -129,10 +129,8 @@ class Audio(Media):
             raise ValueError("Channel outside range.")
 
         sig = self.get_signal()
+        sig = utils.sigChannel(sig,channel,self.nchannels)
 
-        if self.nchannels > 1:
-            sig = sig[[channel],:]
-        
         return utils.mfcc(sig,sr=self.sr, S=None, n_mfcc=n_mfcc, dct_type=dct_type, norm=norm)
 
     def write_media(self,path,media_format="wav",sr=None):
@@ -152,11 +150,11 @@ class Audio(Media):
     def plot_spec(self,ax,channel=0,n_fft=1024,hop_length=512):
         spec, freqs = self.get_spec(channel=channel,n_fft=n_fft,hop_length=hop_length)
 
-        return utils.plot_power_spec(spec,ax)
+        return utils.plot_power_spec(spec,ax,self.sr)
 
-    def plot_waveform(self,ax,wtype="simple"):
+    def plot_waveform(self,ax,channel=0,wtype="simple"):
         sig = self.get_signal()
-
+        sig = utils.sigChannel(sig,channel,self.nchannels)
         return utils.plot_waveform(sig,self.sr,ax,wtype=wtype)
 
 

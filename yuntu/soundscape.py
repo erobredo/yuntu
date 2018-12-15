@@ -2,6 +2,7 @@
 from core import dataframe
 from core.collections import audioCollection
 import numpy as np
+from tqdm import tqdm
 
 
 class Soundscape(object):
@@ -9,9 +10,11 @@ class Soundscape(object):
         self.name = name
         self.timeStep = timeStep
         self.freqStep = freqStep
-        self.n_fft=n_ftt 
+        self.n_fft=n_fft 
         self.hop_length=hop_length
         self.channel = channel
+        self.flimits = flimits
+
 
         if isinstance(data,audioCollection):
             self.collection = data
@@ -22,7 +25,10 @@ class Soundscape(object):
 
 
     def initDataFrame(self):
+        print("Generating soundscape...")
         energySamples = []
+
+        pbar = tqdm(total=self.collection.size)
         for akey in self.collection.data.keys():
             audio = self.collection.data[akey]
 
@@ -39,25 +45,33 @@ class Soundscape(object):
                         e[mkey] = audio.metadata[mkey]
 
                     energySamples.append(e)
+            pbar.update(1)
 
         self.soundscapeDataFrame = dataframe.fromArray(energySamples)
 
 
 
-    def getDataFrame(self,condition=True):
-        return self.soundscapeDataFrame[condition]
+    def getDataFrame(self,condition=None):
+        if condition is None:
+            return self.soundscapeDataFrame
+        else:
+            return self.soundscapeDataFrame[condition]
 
-    def sum(self,groupBy,condition=True):
-        return energySum(self.soundscapeDataFrame,groupBy,condition)
+    def summary(self,groupBy,condition=None):
+        results = None
 
-    def mean(self,groupBy,condition=True):
-        return energyMean(self.soundscapeDataFrame,groupBy,condition)
+        if condition is None:
+            if results is None:
+                results = self.soundscapeDataFrame.groupby(groupBy).apply(energySummary)
+            else:
+                results = results.join(self.soundscapeDataFrame.groupby(groupBy).apply(energySummary))
+        else:
+            if results is None:
+                results = self.soundscapeDataFrame[condition].groupby(groupBy).apply(energySummary)
+            else:
+                results = results.join(self.soundscapeDataFrame[condition].groupby(groupBy).apply(energySummary))
 
-    def var(self,groupBy,condition=True):
-        return energyVar(self.soundscapeDataFrame,groupBy,condition)
-
-    def std(self,groupBy,condition=True):
-        return energyStd(self.soundscapeDataFrame,groupBy,condition)
+        return results
 
 
 
@@ -73,7 +87,6 @@ def energySteps(audio,tstep,fstep,flimits=None,channel=0,n_fft=1024,hop_length=5
     minFreqIdx = 0
 
     freqRange = topFreq
-
     if flimits is not None:
 
         maxFreqIdx = min(int(round(fbins*flimits[1]/freqRange)),fbins)
@@ -82,24 +95,54 @@ def energySteps(audio,tstep,fstep,flimits=None,channel=0,n_fft=1024,hop_length=5
         if maxFreqIdx <= minFreqIdx:
             raise ValueError("Wrong frequency limits")
 
-        spec = spec[:,maxFreqIdx:minFreqIdx]
+        spec = spec[minFreqIdx:maxFreqIdx,:]
         freqRange = flimits[1]-flimits[0]
 
-    tbins,fbins = spec.shape
+    fbins,tbins = spec.shape
 
     tstep_ = int(round(tbins*(float(tstep)/duration)))
     fstep_ = int(round(fbins*(float(fstep)/freqRange)))
 
+
     ntsteps = int(round(float(tbins)/tstep_))
     nfsteps = int(round(float(fbins)/fstep_))
 
-    energies = [{"energy": np.sum(np.concatenate([np.sum(spec[:,f*fstep_:f*fstep_+fstep_],axis=1) for f in range(nfsteps) if f*fstep_+fstep_ < fbins],axis=1)[i*tstep_:i*tstep_+tstep_,:],axis=0),"start":i*tstep,"stop":i*tstep+tstep,"channel":channel} for i in range(ntsteps) if i*tstep_+tstep_ < tbins]
+    larger = False
+    if tstep < duration:
+        splitsTime = [i*tstep_+tstep_ for i in range(ntsteps-1)]
+        timeSplit = np.split(spec,splitsTime,axis=1)
+    else:
+        timeSplit = [spec]
+        larger = True
 
-    if norm:
-        for i in range(len(energies)):
-            e = energies[i]["energy"]
+    splitsFreq = [i*fstep_+fstep_ for i in range(nfsteps-1)]
+
+
+    energies = []
+
+    for i in range(len(timeSplit)):
+        e = timeSplit[i]
+
+        if norm:
             maxe = np.amax(e)
-            energies[i]["energy"] = e/maxe
+            if maxe > 0:
+                e = e/maxe
+
+        e = np.sum(e,axis=1)
+        e = np.array(np.split(e,splitsFreq,axis=0))
+        e = np.sum(e,axis=1)
+
+        if larger:
+            start = i*tstep
+            stop = i*tstep+tstep
+
+            if i == len(timeSplit)-1:
+                stop = duration
+        else:
+            start = 0
+            stop = duration
+
+        energies.append({"energy":e,"start":start,"stop":stop,"channel":channel})
 
     audio.clear_media()
 
@@ -116,24 +159,18 @@ def shannon(vec):
 
     return result
 
+def energySummary(x):
+    d = {}
+    w = (x["stop"]-x["start"])/((x["stop"]-x["start"]).sum())
 
-def energyMean(sdf,groupBy,condition=True):
-    df = dataframe.vectorGroupBy(sdf,target="energy",agg_func=np.mean,groupBy=groupBy,condition=condition)
-    return df
+    d["energy_sum"] = x["energy"].sum()
+    d["energy_mean"] = (x['energy']*w).sum()
+    d["energy_var"] = (((x['energy']-d["energy_mean"])**2)*w).sum()
+    d["energy_std"] = np.sqrt(d["energy_var"])
+    
+    return dataframe.makeSeries(d,['energy_mean','energy_std','energy_var','energy_sum'])
 
-def energySum(sdf,groupBy,condition=True):
-    df = dataframe.vectorGroupBy(sdf,target="energy",agg_func=np.sum,groupBy=groupBy,condition=condition)
-    return df
 
-def energyVar(sdf,groupBy,condition=True):
-    df = dataframe.vectorGroupBy(sdf,target="energy",agg_func=np.var,groupBy=groupBy,condition=condition)
-    return df
 
-def energyStd(sdf,groupBy,condition=True):
-    df = dataframe.vectorGroupBy(sdf,target="energy",agg_func=np.std,groupBy=groupBy,condition=condition)
-    return df
 
-def ADI(sdf,condition):
-    df = dataframe.vectorApply(sdf,target="energy",map_func=shannon,condition=condition)
-    return df
 
