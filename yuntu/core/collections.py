@@ -25,7 +25,7 @@ class mediaCollection(object):
 class audioCollection(mediaCollection):
     __metaclass__ = ABCMeta
 
-    def __init__(self,name,data=None,mongoDict=None,metadataParse=None):
+    def __init__(self,name,data=None,sr=None,mongoDict=None,metadataParse=None):
         self.name = name
         self.data = data
         self.mongoDict = mongoDict
@@ -33,23 +33,24 @@ class audioCollection(mediaCollection):
         self.size = 0
 
         self.initDataframe()
+        self.setCollectionSamplerate(sr)
+
 
     def initDataframe(self):
         if self.data is not None:
-            self.data, self.dataFrame = dataframe.fromAudioArray(self.data,self.metadataParse)
+            self.data, self.df = dataframe.fromAudioArray(self.data,self.metadataParse)
         elif self.mongoDict is not None:
-            self.data, self.dataFrame = dataframe.fromMongoQuery(self.mongoDict,self.metadataParse)
+            self.data, self.df = dataframe.fromMongoQuery(self.mongoDict,self.metadataParse)
         else:
             raise ValueError("Variable 'data' is None but no other data source supplied.")
 
         self.size = len(self.data.keys())
 
-
-    def getDataFrame(self,condition=None):
-        if condition is None:
-            return self.dataFrame
-        else:
-            return self.dataFrame[condition]
+    def setCollectionSamplerate(self,sr):
+        if sr is not None:
+            self.sr = sr
+            for key in self.data:
+                self.data[key].set_read_sr(self.sr)
 
     def setSamplingResolution(self,timeStep=None,freqStep=None):
         if timeStep is not None:
@@ -60,19 +61,19 @@ class audioCollection(mediaCollection):
 
     def getMedia(self,condition=None):
         if condition is None:
-            indArr =  list(self.dataFrame["akey"])
+            indArr =  list(self.df["md5"])
         else:
-            indArr = list(self.dataFrame[condition]["akey"])
+            indArr = list(self.df[condition]["md5"])
 
         return [self.data[key] for key in indArr]
 
     def dropMedia(self,condition=None):
-        self.dataFrame, keyArr = dataframe.dropData(self.dataFrame,condition)
+        self.df, keyArr = dataframe.dropData(self.df,condition)
         for key in keyArr:
             del self.data[key]
 
     def upsertMedia(self,arr):
-        upserted, self.dataFrame = dataframe.upsertData(self.dataFrame,arr,self.metadata)
+        upserted, self.df = dataframe.upsertData(self.df,arr,self.metadata)
         for key in upserted:
             self.data[key] = upserted[key]
 

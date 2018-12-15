@@ -7,9 +7,11 @@ from utils import binaryMD5
 from tqdm import tqdm
 
 def indexAudio(audioArr,metadataParse=None):
+    print("Indexing audio...")
+
     data = {}
     total_audio = len(audioArr)
-    print("Indexing audio...")
+    
 
     pbar = tqdm(total=total_audio)
     for i in range(total_audio):
@@ -22,14 +24,11 @@ def indexAudio(audioArr,metadataParse=None):
 
         if "md5" in metadata:
             md5 = metadata["md5"]
-        elif "akey" in metadata:
-            md5 = metadata["akey"]
-            metadata["md5"] = md5
         else:
             md5 = binaryMD5(audio.path)
             metadata["md5"] = md5
 
-        metadata["akey"] = md5
+
         audio.set_metadata(metadata)
         data[md5] = audio
 
@@ -39,9 +38,9 @@ def indexAudio(audioArr,metadataParse=None):
     dictArr = [data[key].metadata for key in audio_ids]
 
     if len(audio_ids) < total_audio:
-        print("Droped "+str(total_audio-len(audio_ids))+" duplicates (md5 match).")
+        print("Droped "+str(total_audio-len(audio_ids))+" duplicates (md5).")
 
-    return data,dictArr
+    return data, dictArr
 
 def fromArray(dictArr):
     return pd.DataFrame.from_dict(dictArr)
@@ -64,7 +63,7 @@ def fromMongoQuery(mongoDict,metadataParse):
     collection = mongoDb[mongoDict["collection"]]
 
     audioArr = []
-    for metadata in collection.find(mongoDict["query"]).limit(10):
+    for metadata in collection.find(mongoDict["query"]).limit(20):
         if "media_info" in metadata:
             config = metadata["media_info"]
         else:
@@ -84,25 +83,15 @@ def fromMongoQuery(mongoDict,metadataParse):
 
 def dropData(df,condition=None):
     if condition is None:
-        indArr = list(df["akey"])
+        indArr = list(df["md5"])
     else:
-        indArr = list(df[condition]["akey"])
-    df = df[~df["akey"].isin(indArr)]
+        indArr = list(df[condition]["md5"])
+    df = df[~df["md5"].isin(indArr)]
     return df, indArr
 
 def upsertData(df,audioArr,metadataParse=None):
     dictArr, data = indexAudio(audioArr,metadataParse)
     return data, df.append(dictArr)
-
-def vectorGroupBy(df,target,agg_func,groupBy,condition=None):
-    if condition is None:
-        result = df.groupby(groupBy).agg({target:lambda x:list(agg_func(x))})
-    else:
-        result = df[condition].groupby(groupBy).agg({target:lambda x:list(agg_func(x))})
-
-    result[target] = result[target].apply(np.array)
-
-    return result
 
 def vectorApply(df,target,new_col_name,map_func,condition=None):
     if condition is None:

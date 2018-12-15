@@ -25,6 +25,15 @@ def binaryMD5(path):
     else:
         return None
 
+def shannon(v):
+    sum_v = np.sum(v)
+    s = None
+    if sum_v > 0:
+        p = v/sum_v
+        s = -(np.sum(p*np.log(p)))
+
+    return s
+
 def media_size(path):
     if path is not None:
         if os.path.isfile(path):

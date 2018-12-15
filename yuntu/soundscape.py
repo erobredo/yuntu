@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 
 class Soundscape(object):
-    def __init__(self,name,data,timeStep=60,freqStep=100,flimits=None,channel=None,n_fft=1024,hop_length=512,mongoDict=None,metadataParse=None):
+    def __init__(self,name,data,timeStep=60,freqStep=100,flimits=None,channel=None,n_fft=1024,hop_length=512,sr=None,mongoDict=None,metadataParse=None):
         self.name = name
         self.timeStep = timeStep
         self.freqStep = freqStep
@@ -14,12 +14,14 @@ class Soundscape(object):
         self.hop_length=hop_length
         self.channel = channel
         self.flimits = flimits
+        self.sr = sr
 
 
         if isinstance(data,audioCollection):
             self.collection = data
+            self.collection.setCollectionSamplerate(self.sr)
         else:
-            self.collection = audioCollection(name=name+"_collection",data=data,mongoDict=mongoDict,metadataParse=metadataParse)
+            self.collection = audioCollection(name=name+"_collection",data=data,sr=self.sr,mongoDict=mongoDict,metadataParse=metadataParse)
 
         self.initDataFrame()
 
@@ -29,8 +31,8 @@ class Soundscape(object):
         energySamples = []
 
         pbar = tqdm(total=self.collection.size)
-        for akey in self.collection.data.keys():
-            audio = self.collection.data[akey]
+        for md5 in self.collection.data.keys():
+            audio = self.collection.data[md5]
 
             if self.channel is None:
                 channels = range(audio.nchannels)
@@ -40,36 +42,30 @@ class Soundscape(object):
             for ch in channels:
                 energies = energySteps(audio,tstep=self.timeStep,fstep=self.freqStep,flimits=self.flimits,channel=ch,n_fft=self.n_fft,hop_length=self.hop_length)
                 for e in energies:
-                    e["akey"] = akey
+                    e["md5"] = md5
                     for mkey in audio.metadata.keys():
                         e[mkey] = audio.metadata[mkey]
 
                     energySamples.append(e)
             pbar.update(1)
 
-        self.soundscapeDataFrame = dataframe.fromArray(energySamples)
+        self.df = dataframe.fromArray(energySamples)
 
 
-
-    def getDataFrame(self,condition=None):
-        if condition is None:
-            return self.soundscapeDataFrame
-        else:
-            return self.soundscapeDataFrame[condition]
 
     def summary(self,groupBy,condition=None):
         results = None
 
         if condition is None:
             if results is None:
-                results = self.soundscapeDataFrame.groupby(groupBy).apply(energySummary)
+                results = self.df.groupby(groupBy).apply(energySummary)
             else:
-                results = results.join(self.soundscapeDataFrame.groupby(groupBy).apply(energySummary))
+                results = results.join(self.df.groupby(groupBy).apply(energySummary))
         else:
             if results is None:
-                results = self.soundscapeDataFrame[condition].groupby(groupBy).apply(energySummary)
+                results = self.df[condition].groupby(groupBy).apply(energySummary)
             else:
-                results = results.join(self.soundscapeDataFrame[condition].groupby(groupBy).apply(energySummary))
+                results = results.join(self.df[condition].groupby(groupBy).apply(energySummary))
 
         return results
 
@@ -132,7 +128,7 @@ def energySteps(audio,tstep,fstep,flimits=None,channel=0,n_fft=1024,hop_length=5
         e = np.array(np.split(e,splitsFreq,axis=0))
         e = np.sum(e,axis=1)
 
-        if larger:
+        if not larger:
             start = i*tstep
             stop = i*tstep+tstep
 
@@ -149,26 +145,19 @@ def energySteps(audio,tstep,fstep,flimits=None,channel=0,n_fft=1024,hop_length=5
     return energies
 
 
-def shannon(vec):
-    sum_vec = np.sum(vec)
-    result = None
-
-    if sum_vec > 0:
-        norm_vec = vec/sum_vec
-        result = -(np.sum(norm_vec*np.log(norm_vec)))
-
-    return result
-
 def energySummary(x):
     d = {}
     w = (x["stop"]-x["start"])/((x["stop"]-x["start"]).sum())
 
+    d["nsamples"] = x["md5"].count()
     d["energy_sum"] = x["energy"].sum()
     d["energy_mean"] = (x['energy']*w).sum()
     d["energy_var"] = (((x['energy']-d["energy_mean"])**2)*w).sum()
     d["energy_std"] = np.sqrt(d["energy_var"])
+
+
     
-    return dataframe.makeSeries(d,['energy_mean','energy_std','energy_var','energy_sum'])
+    return dataframe.makeSeries(d,['nsamples','energy_mean','energy_std','energy_var','energy_sum'])
 
 
 
