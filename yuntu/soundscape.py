@@ -1,12 +1,26 @@
 
+from abc import abstractmethod, ABCMeta
 from core import dataframe
-from core.collections import audioCollection
+from core.collection import timedAudioCollection
 import numpy as np
 from tqdm import tqdm
 
 
-class Soundscape(object):
-    def __init__(self,name,data,timeStep=60,freqStep=100,flimits=None,channel=None,n_fft=1024,hop_length=512,sr=None,mongoDict=None,metadataParse=None):
+class Datascape(object):
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def initDataFrame(self):
+        pass
+
+    @abstractmethod
+    def summary(self,groupBy,condition=None):
+        pass
+
+class metaSoundscape(Datascape):
+    __metaclass__ = ABCMeta
+
+    def __init__(self,name,collection,timeStep=60,freqStep=100,energyTransform=None,preProcess=None,flimits=None,channel=None,n_fft=1024,hop_length=512):
         self.name = name
         self.timeStep = timeStep
         self.freqStep = freqStep
@@ -14,14 +28,9 @@ class Soundscape(object):
         self.hop_length=hop_length
         self.channel = channel
         self.flimits = flimits
-        self.sr = sr
-
-
-        if isinstance(data,audioCollection):
-            self.collection = data
-            self.collection.setCollectionSamplerate(self.sr)
-        else:
-            self.collection = audioCollection(name=name+"_collection",data=data,sr=self.sr,mongoDict=mongoDict,metadataParse=metadataParse)
+        self.collection = collection
+        self.preProcess = preProcess
+        self.energyTransform = energyTransform
 
         self.initDataFrame()
 
@@ -33,14 +42,13 @@ class Soundscape(object):
         pbar = tqdm(total=self.collection.size)
         for md5 in self.collection.data.keys():
             audio = self.collection.data[md5]
-
             if self.channel is None:
                 channels = range(audio.nchannels)
             else:
                 channels = [self.channel]
 
             for ch in channels:
-                energies = energySteps(audio,tstep=self.timeStep,fstep=self.freqStep,flimits=self.flimits,channel=ch,n_fft=self.n_fft,hop_length=self.hop_length)
+                energies = energySteps(audio,tstep=self.timeStep,fstep=self.freqStep,energyTransform=self.energyTransform,preProcess=self.preProcess,flimits=self.flimits,channel=ch,n_fft=self.n_fft,hop_length=self.hop_length)
                 for e in energies:
                     e["md5"] = md5
                     for mkey in audio.metadata.keys():
@@ -70,11 +78,21 @@ class Soundscape(object):
         return results
 
 
+class cronoSoundscape(metaSoundscape):
 
-def energySteps(audio,tstep,fstep,flimits=None,channel=0,n_fft=1024,hop_length=512,norm=True):
+    def __init__(self,name,collection,timeStep=60,freqStep=100,energyTransform=None,preProcess=None,flimits=None,channel=None,n_fft=1024,hop_length=512):
+
+        if isinstance(collection,timedAudioCollection):
+            super(cronoSoundscape, self).__init__(name,collection,timeStep,freqStep,energyTransform,preProcess,flimits,channel,n_fft,hop_length)
+        else:
+            raise ValueError("A collection of class 'cronoAudioCollection' must be supplied in order to build a 'cronoSoundscape'.")
+
+
+
+def energySteps(audio,tstep,fstep,energyTransform=None,preProcess=None,flimits=None,channel=0,n_fft=1024,hop_length=512,norm=True):
     audio.unset_mask()
 
-    spec, freqs = audio.get_spec(channel,n_fft,hop_length)
+    spec, freqs = audio.get_spec(channel,n_fft,hop_length,preProcess)
     duration = audio.duration
     topFreq = np.amax(freqs)
     fbins = freqs.size
@@ -111,6 +129,7 @@ def energySteps(audio,tstep,fstep,flimits=None,channel=0,n_fft=1024,hop_length=5
         timeSplit = [spec]
         larger = True
 
+
     splitsFreq = [i*fstep_+fstep_ for i in range(nfsteps-1)]
 
 
@@ -118,6 +137,9 @@ def energySteps(audio,tstep,fstep,flimits=None,channel=0,n_fft=1024,hop_length=5
 
     for i in range(len(timeSplit)):
         e = timeSplit[i]
+
+        if energyTransform is not None:
+            e = energyTransform(e)
 
         if norm:
             maxe = np.amax(e)

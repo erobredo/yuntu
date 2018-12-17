@@ -33,7 +33,7 @@ class Audio(Media):
             
 
     def load_basic_info(self):
-        self.original_sr = self.config["sr"]
+        self.original_sr = self.config["samplerate"]
         self.nchannels = self.config["nchannels"]
         self.sampwidth = self.config["sampwidth"]
         self.length = self.config["length"]
@@ -84,7 +84,6 @@ class Audio(Media):
         info = {}
         info["path"] = self.path
         info["filesize"] = self.filesize
-        info["md5"] = self.md5
         info["timeexp"] = self.timeexp
         info["samplerate"] = self.original_sr
         info["sampwidth"] = self.sampwidth
@@ -94,29 +93,31 @@ class Audio(Media):
 
         return info
 
-    def get_signal(self):
+    def get_signal(self,preProcess=None):
         if self.signal is None:
             self.read_media()
+            if preProcess is not None:
+                self.signal = preProcess(self.signal)
 
         return self.signal
 
 
-    def get_zcr(self,channel=0,frame_length=1024,hop_length=512):
+    def get_zcr(self,channel=0,frame_length=1024,hop_length=512,preProcess=None):
         if channel > self.nchannels -1:
             raise ValueError("Channel outside range.")
 
-        sig = self.get_signal()
+        sig = self.get_signal(preProcess)
 
         sig = utils.sigChannel(sig,channel,self.nchannels)
 
         
         return utils.zero_crossing_rate(sig,frame_length,hop_length)       
 
-    def get_spec(self, channel=0, n_fft=1024, hop_length=512):
+    def get_spec(self, channel=0, n_fft=1024, hop_length=512,preProcess=None):
         if channel > self.nchannels -1:
             raise ValueError("Channel outside range.")
 
-        sig = self.get_signal()
+        sig = self.get_signal(preProcess)
 
         sig = utils.sigChannel(sig,channel,self.nchannels)
 
@@ -124,11 +125,11 @@ class Audio(Media):
         return utils.spectrogram(sig,n_fft=n_fft,hop_length=hop_length), utils.spec_frequencies(self.sr,n_fft)
 
 
-    def get_mfcc(self,channel=0,sr=22050, S=None, n_mfcc=20, dct_type=2, norm='ortho'):
+    def get_mfcc(self,channel=0,sr=22050, S=None, n_mfcc=20, dct_type=2, norm='ortho',preProcess=None):
         if channel > self.nchannels -1:
             raise ValueError("Channel outside range.")
 
-        sig = self.get_signal()
+        sig = self.get_signal(preProcess)
         sig = utils.sigChannel(sig,channel,self.nchannels)
 
         return utils.mfcc(sig,sr=self.sr, S=None, n_mfcc=n_mfcc, dct_type=dct_type, norm=norm)
@@ -147,13 +148,13 @@ class Audio(Media):
         else:
             raise ValueError("Writing to '"+media_format+"' is not supported yet.")
 
-    def plot_spec(self,ax,channel=0,n_fft=1024,hop_length=512):
-        spec, freqs = self.get_spec(channel=channel,n_fft=n_fft,hop_length=hop_length)
+    def plot_spec(self,ax,channel=0,n_fft=1024,hop_length=512,preProcess=None):
+        spec, freqs = self.get_spec(channel=channel,n_fft=n_fft,hop_length=hop_length,preProcess=preProcess)
 
         return utils.plot_power_spec(spec,ax,self.sr)
 
-    def plot_waveform(self,ax,channel=0,wtype="simple"):
-        sig = self.get_signal()
+    def plot_waveform(self,ax,channel=0,wtype="simple",preProcess=None):
+        sig = self.get_signal(preProcess)
         sig = utils.sigChannel(sig,channel,self.nchannels)
         return utils.plot_waveform(sig,self.sr,ax,wtype=wtype)
 
