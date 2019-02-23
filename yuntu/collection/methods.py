@@ -5,7 +5,8 @@ import datetime,time
 from yuntu.core.audio.utils import binaryMD5
 from yuntu.core.db.base import embeddedDb
 from yuntu.core.db.methods import lDbUpdateField
-from yuntu.collection.utils import audioIterator, audioArray
+from yuntu.core.datastore.base import simpleDatastore, directDatastore,mongoDatastore
+from yuntu.collection.utils import audioIterator, audioArray, cleanDirectory
 
 def collectionPersistParser(col,parserDict):
     path = parserDict["path"]
@@ -34,9 +35,14 @@ def collectionExists(col):
 
 def collectionDrop(col):
     colPath = col.colPath
-    shutil.rmtree(colPath)
+    parserPath = os.path.join(colPath,"parsers")
+    mediaPath = os.path.join(colPath,"media")
+    dbPath = os.path.join(colPath,"db")
 
-    return True
+    if cleanDirectory(colPath) and cleanDirectory(parserPath) and cleanDirectory(mediaPath) and cleanDirectory(dbPath):
+        return True
+    else:
+        raise ValueError("Cannot clean all directories in path. More permissions may be needed")
 
 def collectionLoadInfoFile(name,dirPath):
     infoPath = os.path.join(dirPath,name,"info.json")
@@ -59,9 +65,12 @@ def collectionBuild(col):
     colPath = col.colPath
     dbPath = os.path.join(colPath,"db")
     parserPath = os.path.join(colPath,"parsers")
-    os.mkdir(colPath)
-    os.mkdir(dbPath)
-    os.mkdir(parserPath)
+    if not os.path.exists(colPath):
+        os.mkdir(colPath)
+    if not os.path.exists(dbPath):
+        os.mkdir(dbPath)
+    if not os.path.exists(parserPath):
+        os.mkdir(parserPath)
     col.db = embeddedDb(col.name,os.path.join(col.colPath,"db"),True)
 
     strtime = time.strftime("%d-%m-%Y,%H:%M:%S", time.gmtime())
@@ -76,12 +85,23 @@ def collectionLoad(col):
     col.db = embeddedDb(col.name,os.path.join(col.colPath,"db"),False)
     return True
 
-def collectionInsert(col,dataArray,parseSeq,source={"type":"direct","connection":None}):
+def collectionInsert(col,input,parseSeq):
     for i in range(len(parseSeq)):
         parseSeq[i] = collectionPersistParser(col,parseSeq[i])
 
-    col.db.insert([{"source":source,"metadata":d} for d in dataArray],parseSeq)
-    return True
+    if isinstance(input,simpleDatastore):
+        ds = input
+    else:
+        ds = directDatastore(input)
+
+    return col.db.insert(ds.getData(),parseSeq)
+
+def collectionPullDatastore(col,dsDict,parseSeq):
+    if dsDict["type"] == "mongodb":
+        ds = mongoDatastore(dsDict)
+        return col.insertMedia(ds,parseSeq)
+    else:
+        raise ValueError("Datastore not implemented")
 
 def collectionTransform(col,parseSeq,id=None,where=None,query=None,operation="append"):
     for i in range(len(parseSeq)):
@@ -168,6 +188,10 @@ def collectionMaterialize(col,dirPath=None,overwrite=False):
     col.db.connect()
 
     return newColPath
+
+
+
+
 
 
 

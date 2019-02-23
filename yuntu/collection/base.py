@@ -58,14 +58,14 @@ class audioCollection(mediaCollection):
     def getMedia(self,where=None,query=None,iterate=True):
         return colMethods.collectionQuery(self,where,query,iterate)
 
-    def getMediaById(self,id):
-        return colMethods.collectionQuery(self,id=id,iterate=False)
-
-    def insertMedia(self,dataArray,parseSeq,source={"type":"direct","connection":None}):
-        return colMethods.collectionInsert(self,dataArray,parseSeq,source)
+    def insertMedia(self,input,parseSeq=None):
+        return colMethods.collectionInsert(self,input,parseSeq)
 
     def dropMedia(self,where=None,query=None):
         return colMethods.collectionDropMedia(self,where,query)
+
+    def pullDatastore(self,dsDict,parseSeq=None):
+        return colMethods.collectionPullDatastore(self,dsDict,parseSeq)
 
     def transformMetadata(self,parseSeq,id=None,where=None,query=None,operation="append"):
         return colMethods.collectionTransform(self,parseSeq,id,where,query,operation)

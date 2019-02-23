@@ -43,13 +43,11 @@ def lDbParseQuery(query):
                 isDict = False
                 if isinstance(condition,dict):
                     isDict = True
-                print(key)
                 if "metadata" in key:
                     subStatement += "json_extract(metadata,'$."+key.replace("metadata.","")+"')"
                 elif "media_info" in key:
                     subStatement += "json_extract(media_info,'$."+key.replace("media_info.","")+"')"
                 elif "parse_seq" in key:
-                    print(key)
                     if isDict:
                         if "$size" in condition:
                             subStatement += "json_array_length(parse_seq)"
@@ -123,7 +121,7 @@ def lDbExists(db):
 def lDbRowFactory(cursor,row):
     d = {}
     for idx, col in enumerate(cursor.description):
-        if col[0] in ["metadata","media_info","parse_seq","source"]:
+        if col[0] in ["metadata","media_info","parse_seq","source","conf"]:
             d[col[0]] = json.loads(row[idx])
         else:
             d[col[0]] = row[idx]
@@ -148,6 +146,16 @@ def lDbCreateStructure(db):
     connPath = db.connPath
     cnn = sqlite3.connect(connPath)
     cursor = cnn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS datastores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            hash TEXT NOT NULL,
+            type TEXT NOT NULL,
+            conf JSON NOT NULL,
+            metadata JSON NOT NULL,
+            UNIQUE(hash)
+        )
+        """)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS original (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -210,7 +218,7 @@ def lDbUpdateParseSeq(db,parseSeq,orid=None,whereSt=None,query=None,operation="a
     if whereSt is not None:
         matches = cursor.execute('SELECT * FROM {tn} WHERE {whereSt}'.format(tn="parsed",whereSt=whereSt)).fetchall()
     elif orid is not None:
-        matches = cursor.execute('SELECT * FROM {tn} WHERE orid = {orid}'.format(tn="parsed",orid=orid)).fetchone()
+        matches = cursor.execute('SELECT * FROM {tn} WHERE orid = {orid}'.format(tn="parsed",orid=orid)).fetchall()
     else:
         matches = cursor.execute('SELECT * FROM {tn}'.format(tn="parsed",whereSt=whereSt)).fetchall()
 
@@ -236,19 +244,36 @@ def lDbInsert(db,dataArray,parseSeq=[]):
     cursor = cnn.cursor()
 
     for dataObj in dataArray:
+        dsconf = dataObj["datastore"]
         source = dataObj["source"]
         rawMetadata = dataObj["metadata"]
-        orid = cursor.execute("""
+
+        dsmatches = cursor.execute('SELECT * FROM {tn} WHERE hash = {hash}'.format(tn="datastores",hash="'"+dsconf["hash"]+"'")).fetchall()
+
+        if len(dsmatches) > 0:
+            source["source_id"] = dsmatches[0]["id"]
+        else:
+            cursor.execute("""
+                INSERT INTO datastores (hash,type,conf,metadata)
+                    VALUES (?,?,?,?)
+                """, (dsconf["hash"],dsconf["type"],json.dumps(dsconf["conf"]),json.dumps(dsconf["metadata"])))
+
+            source["source_id"] = cursor.lastrowid
+
+
+        cursor.execute("""
             INSERT INTO original (source,metadata)
-                VALUES (?, ?)
+                VALUES (?,?)
             """, (json.dumps(source),json.dumps(rawMetadata)))
 
+        orid = cursor.lastrowid
+        metadata = dataObj["metadata"]
 
-        metadata = row["metadata"]
 
         for parserDict in parseSeq:
             parserFunction = dbUtils.loadParser(parserDict)
             metadata = parserFunction(metadata)
+
 
         path = metadata["path"]
         timeexp = metadata["timeexp"]
@@ -258,10 +283,11 @@ def lDbInsert(db,dataArray,parseSeq=[]):
             md5 = metadata["md5"]
 
         media_info,md5 = dbUtils.describeAudio(path,timeexp,md5)
+        media_info["md5"] = md5
 
         cursor.execute("""
-            INSERT INTO parsed (orid, md5,path,original_path,parse_seq, metadata)
-                VALUES (?, ?, ?, ?, ?)
+            INSERT INTO parsed (orid,md5,path,original_path,parse_seq,media_info,metadata)
+                VALUES (?,?,?,?,?,?,?)
             """, (orid,md5,path,path,json.dumps(parseSeq),json.dumps(media_info),json.dumps(metadata)))
 
     cnn.commit()
@@ -269,7 +295,7 @@ def lDbInsert(db,dataArray,parseSeq=[]):
     return True
 
 def lDbFind(db,orid=None,query=None):
-    wStatement = methods.lDbParseQuery(query)
+    wStatement = lDbParseQuery(query)
 
     return lDbSelect(db,orid,wStatement)
 
@@ -280,7 +306,7 @@ def lDbSelect(db,orid=None,whereSt=None):
     if whereSt is not None:
         matches = cursor.execute('SELECT * FROM {tn} WHERE {whereSt}'.format(tn="parsed",whereSt=whereSt)).fetchall()
     elif orid is not None:
-        matches = cursor.execute('SELECT * FROM {tn} WHERE orid = {orid}'.format(tn="parsed",orid=orid)).fetchone()
+        matches = cursor.execute('SELECT * FROM {tn} WHERE orid = {orid}'.format(tn="parsed",orid=orid)).fetchall()
     else:
         matches = cursor.execute('SELECT * FROM {tn}'.format(tn="parsed",whereSt=whereSt)).fetchall()
 
