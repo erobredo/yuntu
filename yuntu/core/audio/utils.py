@@ -78,18 +78,6 @@ def mfcc(sig,sr=22050, S=None, n_mfcc=20, dct_type=2, norm='ortho'):
     return librosa.feature.mfcc(sig,sr,S, n_mfcc, dct_type, norm)
 
 
-def booleanEnergy(nstdev=2):
-    def paramFunc(energy):
-        mean = np.mean(energy)
-        std = np.std(energy)
-        energy[energy-mean<=nstdev*std] = 0.0
-        energy[energy>0.0] = 1.0
-
-        return energy
-
-    return paramFunc
-
-
 def plot_power_spec(spec,ax,sr):
     return librosa.display.specshow(librosa.amplitude_to_db(spec,ref=np.max),ax=ax,y_axis='linear',x_axis='time',sr=sr)
 
@@ -100,4 +88,13 @@ def plot_waveform(sig,sr,ax,wtype="simple"):
         return librosa.display.waveplot(y_perc, ax=ax, sr=sr, color='r', alpha=0.5)
     else:
         return librosa.display.waveplot(sig,sr=sr,ax=ax)
+
+
+
+
+
+
+
+
+
 

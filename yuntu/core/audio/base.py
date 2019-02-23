@@ -1,5 +1,5 @@
 from abc import abstractmethod,ABCMeta
-import utils
+import yuntu.core.audio.utils as  aUtils
 
 class Media(object):
     __metaclass__ = ABCMeta
@@ -45,7 +45,7 @@ class Audio(Media):
         self.signal = None
 
     def read_basic_info(self):
-        self.original_sr,self.nchannels,self.sampwidth,self.length, self.filesize = utils.read_info(self.path)
+        self.original_sr,self.nchannels,self.sampwidth,self.length, self.filesize = aUtils.read_info(self.path)
         self.duration = (float(self.length)/float(self.original_sr))/self.timeexp
         self.sr = self.original_sr
         self.mask = None
@@ -59,7 +59,7 @@ class Audio(Media):
             offset = self.mask[0]
             duration = self.mask[1]-self.mask[0]
 
-        self.signal, self.sr = utils.read(self.path,self.read_sr,offset,duration)
+        self.signal, self.sr = aUtils.read(self.path,self.read_sr,offset,duration)
 
     def clear_media(self):
         self.signal = None
@@ -108,10 +108,10 @@ class Audio(Media):
 
         sig = self.get_signal(preProcess)
 
-        sig = utils.sigChannel(sig,channel,self.nchannels)
+        sig = aUtils.sigChannel(sig,channel,self.nchannels)
 
         
-        return utils.zero_crossing_rate(sig,frame_length,hop_length)       
+        return aUtils.zero_crossing_rate(sig,frame_length,hop_length)       
 
     def get_spec(self, channel=0, n_fft=1024, hop_length=512,preProcess=None):
         if channel > self.nchannels -1:
@@ -119,10 +119,10 @@ class Audio(Media):
 
         sig = self.get_signal(preProcess)
 
-        sig = utils.sigChannel(sig,channel,self.nchannels)
+        sig = aUtils.sigChannel(sig,channel,self.nchannels)
 
 
-        return utils.spectrogram(sig,n_fft=n_fft,hop_length=hop_length), utils.spec_frequencies(self.sr,n_fft)
+        return aUtils.spectrogram(sig,n_fft=n_fft,hop_length=hop_length), aUtils.spec_frequencies(self.sr,n_fft)
 
 
     def get_mfcc(self,channel=0,sr=22050, S=None, n_mfcc=20, dct_type=2, norm='ortho',preProcess=None):
@@ -130,9 +130,9 @@ class Audio(Media):
             raise ValueError("Channel outside range.")
 
         sig = self.get_signal(preProcess)
-        sig = utils.sigChannel(sig,channel,self.nchannels)
+        sig = aUtils.sigChannel(sig,channel,self.nchannels)
 
-        return utils.mfcc(sig,sr=self.sr, S=None, n_mfcc=n_mfcc, dct_type=dct_type, norm=norm)
+        return aUtils.mfcc(sig,sr=self.sr, S=None, n_mfcc=n_mfcc, dct_type=dct_type, norm=norm)
 
     def write_media(self,path,media_format="wav",sr=None):
         if media_format in ["wav","flac","ogg"]:
@@ -142,7 +142,7 @@ class Audio(Media):
             if sr is not None:
                 out_sr = sr
 
-            utils.write(path,sig,out_sr,self.nchannels,media_format)
+            aUtils.write(path,sig,out_sr,self.nchannels,media_format)
 
             return path
         else:
@@ -151,12 +151,12 @@ class Audio(Media):
     def plot_spec(self,ax,channel=0,n_fft=1024,hop_length=512,preProcess=None):
         spec, freqs = self.get_spec(channel=channel,n_fft=n_fft,hop_length=hop_length,preProcess=preProcess)
 
-        return utils.plot_power_spec(spec,ax,self.sr)
+        return aUtils.plot_power_spec(spec,ax,self.sr)
 
     def plot_waveform(self,ax,channel=0,wtype="simple",preProcess=None):
         sig = self.get_signal(preProcess)
-        sig = utils.sigChannel(sig,channel,self.nchannels)
-        return utils.plot_waveform(sig,self.sr,ax,wtype=wtype)
+        sig = aUtils.sigChannel(sig,channel,self.nchannels)
+        return aUtils.plot_waveform(sig,self.sr,ax,wtype=wtype)
 
 
 
