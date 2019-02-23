@@ -199,7 +199,11 @@ def lDbParseSeqOverwrite(row,cursor,parseSeq):
 
     return orid,metadata,parse_seq
 
-def lDbUpdateParseSeq(db,parseSeq,orid=None,whereSt=None,operation="append"):
+def lDbUpdateParseSeq(db,parseSeq,orid=None,whereSt=None,query=None,operation="append"):
+
+    if whereSt is None and query is not None:
+        whereSt = dbMethods.lDbParseQuery(query)
+
     cnn = db.connection
     cursor = cnn.cursor()
 
