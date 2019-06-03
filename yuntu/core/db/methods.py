@@ -7,7 +7,6 @@ import yuntu.core.db.utils as dbUtils
 
 def lDbParseQuery(query):
     fullStatement = None
-
     if query is not None:
         fullStatement = ""
         qkeys = list(query.keys())
@@ -60,7 +59,7 @@ def lDbParseQuery(query):
 
                 if isDict:
                     if "$ne" in condition:
-                        if isinstance(condition,str):
+                        if isinstance(condition["$ne"],str):
                             subStatement += " <> "+"'"+condition["$ne"]+"'"
                         else:
                             subStatement += " <> "+str(condition["$ne"])
@@ -75,7 +74,13 @@ def lDbParseQuery(query):
                     elif "$in" in condition:
                         if isinstance(condition["$in"],list):
                             condTuple = tuple(condition["$in"])
-                            subStatement += " IN "+str(condTuple)
+                            if len(condition["$in"]) == 1:
+                                if isinstance(condition["$in"][0],str):
+                                    subStatement += " = '"+condition["$in"][0]+"'"
+                                else:
+                                    subStatement += " = "+str(condition["$in"][0])
+                            else:
+                                subStatement += " IN "+str(condTuple)
                         else:
                             raise ValueError("'$in' must be used with a list of values to compare")
                     elif "$size" in condition:
@@ -117,6 +122,9 @@ def lDbExists(db):
         return True
     else:
         return False
+
+def lDbNoRowFactory(cursor,row):
+    return row
 
 def lDbRowFactory(cursor,row):
     d = {}
@@ -172,6 +180,7 @@ def lDbCreateStructure(db):
             parse_seq JSON NOT NULL,
             media_info JSON NOT NULL,
             metadata JSON NOT NULL,
+            UNIQUE(md5),
             FOREIGN KEY(orid) REFERENCES original(id)    
         )
         """)
@@ -182,36 +191,56 @@ def lDbCreateStructure(db):
 
     return True
 
-def lDbParseSeqConcat(row,parseSeq):
+def lDbCreateFromDump(db,dump):
+    connPath = db.connPath
+    cnn = sqlite3.connect(connPath)
+    cursor = cnn.cursor()
+
+    statements = []
+    if not isinstance(dump,list):
+        sql = open(dump,'r')
+        strMem = ""
+        for line in sql:
+            strMem = strMem+line
+            if strMem[-2:-1] == ";":
+                statements.append(strMem)
+                strMem = ""
+
+        sql.close()
+    else:
+        statements = dump
+
+    for st in statements:
+        cursor.execute(st)
+
+    cnn.commit()
+    cnn.row_factory = lDbRowFactory
+    db.connection = cnn
+
+    return True
+
+
+
+def lDbParseSeqConcat(row,parseSeq,parsers=None,parsersDir=None):
     orid = row["orid"]
     metadata = row["metadata"]
-
-    for parserDict in parseSeq:
-        parserFunction = dbUtils.loadParser(parserDict)
-        metadata = parserFunction(metadata)
-    
+    metadata = dbUtils.sequentialTransform(metadata,parseSeq,parsers,parsersDir)
     parse_seq = row["parse_seq"] + parseSeq
 
     return orid,metadata,parse_seq
 
-def lDbParseSeqOverwrite(row,cursor,parseSeq):
+def lDbParseSeqOverwrite(row,cursor,parseSeq,parsers=None,parsersDir=None):
     orid = row["orid"]
     oriItem = cursor.execute('SELECT * FROM {tn} WHERE id = {orid}'.format(tn="original",orid=orid)).fetchone()
     metadata = oriItem["metadata"]
-
-    for parserDict in parseSeq:
-        parserFunction = dbUtils.loadParser(parserDict)
-        metadata = parserFunction(metadata)
-    
+    metadata = dbUtils.sequentialTransform(metadata,parseSeq,parsers,parsersDir)
     parse_seq = parseSeq
 
     return orid,metadata,parse_seq
 
-def lDbUpdateParseSeq(db,parseSeq,orid=None,whereSt=None,query=None,operation="append"):
-
-    if whereSt is None and query is not None:
-        whereSt = dbMethods.lDbParseQuery(query)
-
+def lDbUpdateParseSeq(db,parseSeq,orid=None,whereSt=None,operation="append"):
+    parsers = db.parsers
+    parsersDir = db.parsersDir
     cnn = db.connection
     cursor = cnn.cursor()
 
@@ -224,13 +253,13 @@ def lDbUpdateParseSeq(db,parseSeq,orid=None,whereSt=None,query=None,operation="a
 
     if operation == "append":
         for row in matches:
-            orid,metadata,parse_seq = lDbParseSeqConcat(row,parseSeq)
-            cursor.execute('UPDATE {tn} SET parse_seq = {parse_seq}, metadata = {metadata} WHERE orid = {orid}'.format(tn="parsed",parse_seq=json.dumps(parse_seq),metadata=json.dumps(metadata),orid=orid))
+            orid,metadata,parse_seq = lDbParseSeqConcat(row,parseSeq,parsers=parsers,parsersDir=parsersDir)
+            cursor.execute('UPDATE {tn} SET parse_seq = ?, metadata = ? WHERE orid = {orid}'.format(tn="parsed",orid=orid),(json.dumps(parse_seq),json.dumps(metadata)))
     
     elif operation == "overwrite":
         for row in matches:
-            orid,metadata,parse_seq = lDbParseSeqOverwrite(row,cursor,parseSeq)
-            cursor.execute('UPDATE {tn} SET parse_seq = {parse_seq}, metadata = {metadata} WHERE orid = {orid}'.format(tn="parsed",parse_seq=json.dumps(parse_seq),metadata=json.dumps(metadata),orid=orid))
+            orid,metadata,parse_seq = lDbParseSeqOverwrite(row,cursor,parseSeq,parsers=parsers,parsersDir=parsersDir)
+            cursor.execute('UPDATE {tn} SET parse_seq = ?, metadata = ? WHERE orid = {orid}'.format(tn="parsed",orid=orid),(json.dumps(parse_seq),json.dumps(metadata)))
     else:
         raise ValueError("Operation "+str(operation)+" not found.")
 
@@ -238,8 +267,15 @@ def lDbUpdateParseSeq(db,parseSeq,orid=None,whereSt=None,query=None,operation="a
 
     return True
 
+def lDbTimedInsert(db,dataArray,parseSeq,timeField,tzField,format='%d-%m-%Y %H:%M:%S'):
+    return db.insert(dataArray,parseSeq,timeConf={"timeField":timeField,"tzField":tzField,"format":format})
 
-def lDbInsert(db,dataArray,parseSeq=[]):
+
+def lDbInsert(db,dataArray,parseSeq=[],timeConf=None):
+
+
+    parsers = db.parsers
+    parsersDir = db.parsersDir
     cnn = db.connection
     cursor = cnn.cursor()
 
@@ -268,11 +304,9 @@ def lDbInsert(db,dataArray,parseSeq=[]):
 
         orid = cursor.lastrowid
         metadata = dataObj["metadata"]
+        metadata = dbUtils.sequentialTransform(metadata,parseSeq,parsers,parsersDir)
 
 
-        for parserDict in parseSeq:
-            parserFunction = dbUtils.loadParser(parserDict)
-            metadata = parserFunction(metadata)
 
 
         path = metadata["path"]
@@ -285,8 +319,14 @@ def lDbInsert(db,dataArray,parseSeq=[]):
         media_info,md5 = dbUtils.describeAudio(path,timeexp,md5)
         media_info["md5"] = md5
 
+        if timeConf is not None:
+            timeField = timeConf["timeField"]
+            tzField = timeConf["tzField"]
+            format = timeConf["format"]
+            metadata = dbUtils.getTimeFields(metadata,media_info,timeField,tzField,format)
+
         cursor.execute("""
-            INSERT INTO parsed (orid,md5,path,original_path,parse_seq,media_info,metadata)
+            INSERT OR IGNORE INTO parsed (orid,md5,path,original_path,parse_seq,media_info,metadata)
                 VALUES (?,?,?,?,?,?,?)
             """, (orid,md5,path,path,json.dumps(parseSeq),json.dumps(media_info),json.dumps(metadata)))
 
@@ -295,22 +335,45 @@ def lDbInsert(db,dataArray,parseSeq=[]):
     return True
 
 def lDbFind(db,orid=None,query=None):
-    wStatement = lDbParseQuery(query)
+    wStatement = None
+    if query is not None:
+        wStatement = lDbParseQuery(query)
 
     return lDbSelect(db,orid,wStatement)
 
-def lDbSelect(db,orid=None,whereSt=None):
+def lDbSelect(db,orid=None,whereSt=None,freeSt=None):
+    cnn = db.connection
+    cursor = cnn.cursor()
+
+    if freeSt is not None:
+        matches = cursor.execute('SELECT {freeSt}'.format(freeSt=freeSt)).fetchall()
+    else:
+        if whereSt is not None:
+            matches = cursor.execute('SELECT * FROM {tn} WHERE {whereSt}'.format(tn="parsed",whereSt=whereSt)).fetchall()
+        elif orid is not None:
+            matches = cursor.execute('SELECT * FROM {tn} WHERE orid = {orid}'.format(tn="parsed",orid=orid)).fetchall()
+        else:
+            matches = cursor.execute('SELECT * FROM {tn}'.format(tn="parsed")).fetchall()
+
+    return matches
+
+def lDbCount(db,where=None,query=None,groupby=None):
+
+    whereSt = None
+    if where is not None:
+        whereSt = where
+    elif query is not None:
+        whereSt = lDbParseQuery(query)
+
     cnn = db.connection
     cursor = cnn.cursor()
 
     if whereSt is not None:
-        matches = cursor.execute('SELECT * FROM {tn} WHERE {whereSt}'.format(tn="parsed",whereSt=whereSt)).fetchall()
-    elif orid is not None:
-        matches = cursor.execute('SELECT * FROM {tn} WHERE orid = {orid}'.format(tn="parsed",orid=orid)).fetchall()
+        dcount = cursor.execute('SELECT count(*) as count FROM {tn} WHERE {whereSt}'.format(tn="parsed",whereSt=whereSt)).fetchone()
     else:
-        matches = cursor.execute('SELECT * FROM {tn}'.format(tn="parsed",whereSt=whereSt)).fetchall()
+        dcount = cursor.execute('SELECT count(*) as count FROM {tn}'.format(tn="parsed",whereSt=whereSt)).fetchone()
 
-    return matches
+    return dcount   
 
 def lDbRemove(db,orid=None,where=None,query=None):
 
@@ -329,16 +392,16 @@ def lDbRemove(db,orid=None,where=None,query=None):
     return matches
 
 def lDbUpdateField(db,field,value,orid=None,query=None):
-    wStatement = methods.lDbParseQuery(query)
+    whereSt = lDbParseQuery(query)
     cnn = db.connection
     cursor = cnn.cursor()
 
     if whereSt is not None:
-        cursor.execute('UPDATE {tn} SET {field} = {value} WHERE {whereSt}'.format(tn="parsed",field=field,value=value,whereSt=wStatement))
+        cursor.execute('UPDATE {tn} SET {field} = ? WHERE {whereSt}'.format(tn="parsed",field=field,whereSt=whereSt),(value,))
     elif orid is not None:
-        cursor.execute('UPDATE {tn} SET {field} = {value} WHERE orid = {orid}'.format(tn="parsed",field=field,value=value,orid=orid))
+        cursor.execute('UPDATE {tn} SET {field} = ? WHERE orid = {orid}'.format(tn="parsed",field=field,orid=orid),(value,))
     else:
-        cursor.execute('UPDATE {tn} SET {field} = {value}'.format(tn="parsed",field=field,value=value))
+        cursor.execute('UPDATE {tn} SET {field} = ?'.format(tn="parsed",field=field),(value,))
 
     cnn.commit()
 
@@ -347,16 +410,42 @@ def lDbUpdateField(db,field,value,orid=None,query=None):
 def lDbMerge(db1,db2,mergePath,conf1={'parseSeq':[],'operation':'concat'},conf2={'parseSeq':[],'operation':'concat'}):
     pass
 
+def lDbAsStatements(db):
+    cnn = db.connection
+    cnn.row_factory = lDbNoRowFactory
+    statements = [line for line in cnn.iterdump()]
+    cnn.row_factory = lDbRowFactory
+
+    return statements
+
 def lDbDump(db,dumpPath,overwrite):
-    connPath = db.connPath
-    if dumpPath != connPath:
-        shutil.copyfile(connPath,dumpPath)
-    elif overwrite:
-        shutil.copyfile(connPath,dumpPath)
-    else:
-        raise ValueError("Cannot dump db. File exists in directory but overwrite is False")
+    if os.path.isfile(dumpPath) and not overwrite:
+        raise ValueError("File exists but 'overwrite' is False")
+    full_dump = os.linesep.join(db.asStatements())
+    f = open(dumpPath, 'w')
+    f.writelines(full_dump)
+    f.close()
 
     return dumpPath
+
+def lDbTransfer(db,newDirPath,newName=None,overwrite=False):
+    if newName is None:
+        newName = db.name
+    newPath = os.path.join(newDirPath,newName+".sqlite")
+
+    if os.path.isfile(newPath) and not overwrite:
+        raise ValueError("File exists but 'overwrite' is False")
+
+    if db.getType() != "RAMDb":
+        connPath = db.connPath
+        shutil.copyfile(connPath,newPath)
+        return newPath
+    else:
+        print("In memory database, transfering to disk...")
+        db.toDisk(newDirPath,newName).close()
+        return newPath
+
+
 
 
 

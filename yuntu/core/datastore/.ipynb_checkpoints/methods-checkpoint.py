@@ -51,34 +51,6 @@ def datastoreMongodbGetData(ds):
 
     return f(ds.getSpec())
 
-def datastoreAudioMothGetData(ds):
-    def f(dsSpec):
-        dsConf = dsSpec["conf"]
-        dataDir = dsConf["dataDir"]
-        allFiles = []
-        for filename in os.listdir(dsConf["dataDir"]):
-            if filename.endswith(".wav") or filename.endswith(".WAV"): 
-                allFiles.append(filename)
-
-        for i in range(len(allFiles)):
-            fkey = allFiles[i]
-            obj = {}
-
-            tArr = os.path.splitext(fkey)[0].split("_")
-            year = tArr[0][0:4]
-            month = tArr[0][4:6]
-            day = tArr[0][6:]
-            hour = tArr[1][0:2]
-            minute = tArr[1][2:4]
-            second = tArr[1][4:]
-
-            obj["time"] = day+"-"+month+"-"+year+" "+hour+":"+minute+":"+second
-            obj["tZone"] = "UTC"
-            
-            yield {"datastore":dsSpec, "source":{"fkey":fkey},"metadata":obj}
-
-    return f(ds.getSpec())
-
 def datastoreDirectGetData(ds):
     def f(dsSpec,dataArr):
         for i in range(len(dataArr)):

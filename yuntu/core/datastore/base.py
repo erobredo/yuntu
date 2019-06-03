@@ -41,9 +41,6 @@ class simpleDatastore(metaDatastore):
     def getHash(self):
         return dsMethods.datastoreGetHash(self)
 
-    def getData(self):
-        pass
-
 class activeDatastore(simpleDatastore):
     __metaclass__ = ABCMeta
 
@@ -74,8 +71,32 @@ class directDatastore(activeDatastore):
     def getData(self):
         return dsMethods.datastoreDirectGetData(self)
 
-class mongoDatastore(activeDatastore):
+class audioMothDatastore(activeDatastore):
     __metaclass__ = ABCMeta
 
     def getData(self):
-        return dsMethods.datastoreMongoGetData(self)
+        return dsMethods.datastoreAudioMothGetData(self)
+
+class mongodbDatastore(activeDatastore):
+    __metaclass__ = ABCMeta
+
+    def getData(self):
+        return dsMethods.datastoreMongodbGetData(self)
+
+class postgresDatastore(activeDatastore):
+    __metaclass__ = ABCMeta
+
+    def getData(self):
+        pass
+
+class csvDatastore(activeDatastore):
+    __metaclass__ = ABCMeta
+
+    def getData(self):
+        pass
+
+class xlsDatastore(activeDatastore):
+    __metaclass__ = ABCMeta
+
+    def getData(self):
+        pass
