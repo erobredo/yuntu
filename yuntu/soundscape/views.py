@@ -1,48 +1,80 @@
-import plotly.plotly as py
-import plotly.graph_objs as go
-
 import numpy as np
+import matplotlib.pyplot as plt
 
-def boxPlot(groupData,freqBins=None,timeCells=None,):
-    dNames = list(groupData.keys())
-    columns = groupData[dNames[0]].columns
-    allEnergies = []
 
-    i = 1
-    ecol = "e_0"
-    while ecol in columns:
-        allEnergies.append(ecol)
-        i += 1
-        ecol = "e_"+str(i)
+def plot_concat(x,figsize=(20,10),cmap="terrain",interpolation="sinc",xlabel=None,ylabel=None,xlabels=[],ylabels=[],colorbar=True,compose=False,path=None):
+    fig = plt.figure(figsize=figsize)
+    ax = plt.gca()
+    
+    if compose:
+        plot = plt.imshow(x,interpolation=interpolation,extent=[0,1,0,1],aspect="auto")
+    else:
+        plot = plt.imshow(x,interpolation=interpolation,extent=[0,1,0,1],cmap=cmap,aspect="auto")
+    
+    if len(xlabels):
+        xtickpos = np.append(np.arange(0,1,1/(len(xlabels)-1)),[1])
+        ax.set_xticks(xtickpos)
+        ax.set_xticklabels(xlabels)
+        
+    if len(ylabels):
+        ytickpos = np.append(np.arange(0,1,1/(len(ylabels)-1)),[1])
+        ax.set_yticks(ytickpos)
+        ax.set_yticklabels(ylabels)
+        
+    if not compose and colorbar:
+        fig.colorbar(plot, ax=ax)
 
-    data = []
 
-    dEnergies = allEnergies
-    if freqBins is not None:
-        dEnergies = ["e_"+str(x) for x in freqBins]
+    plt.xticks(rotation=90)
+
+    if xlabel:
+        ax.set_xlabel(xlabel)
+        
+    if ylabel:
+        ax.set_ylabel(ylabel)
+
+    if path is not None:
+        plt.savefig(path)
+        
+    return fig,ax,plot
+        
+def plot_aggr(x,figsize=(20,10),cmap="terrain",interpolation="sinc",xlabel=None,ylabel=None,xlabels=[],ylabels=[],aggr="mean",colorbar=True,compose=False,path=None):
+    fig = plt.figure(figsize=figsize)
+    ax = plt.gca()
+
+    if compose:
+        plot = plt.imshow(x,interpolation=interpolation,extent=[0,1,0,1],aspect="auto")
+    else:
+        plot = plt.imshow(x,interpolation=interpolation,extent=[0,1,0,1],cmap=cmap,aspect="auto")
+    
+    if len(xlabels):
+        xtickpos = np.append(np.arange(0,1,1/(len(xlabels)-1)),[1])
+        ax.set_xticks(xtickpos)
+        ax.set_xticklabels(xlabels)
+        
+    if len(ylabels):
+        ytickpos = np.append(np.arange(0,1,1/(len(ylabels)-1)),[1])
+        ax.set_yticks(ytickpos)
+        ax.set_yticklabels(ylabels)
+
+    if not compose and colorbar:
+        fig.colorbar(plot, ax=ax)
+
 
     
-    colors = cl.scales[str(len(dNames))]
-
-    c = 0
-    data = []
-    for g in dNames:
     
-        y = groupData[g][dEnergies[0]].values
-        x = ["e_0" for d in range(y.size)]
-        for i in range(1,len(dEnergies)):
-            y_ =  groupData[g][dEnergies[i]].values
-            x += ["e_"+str(i) for d in range(y_.size)]
-            y = np.concatenate((y,y_))
+    if xlabel:
+        ax.set_xlabel(xlabel)
+        
+    if ylabel:
+        ax.set_ylabel(ylabel)
+    
+    plt.xticks(rotation=90)
 
-        box = go.Box(y=y,x=x,name=g,marker={"color":colors[c]})
-        data.append(box)
-        c += 1
-
-    layout = go.Layout(yaxis=dict(title='',zeroline=False),boxmode='group')
-    fig = go.Figure(data=data, layout=layout)
-    py.iplot(fig)
-
+    if path is not None:
+        plt.savefig(path)
+        
+    return fig,ax,plot
 
 
 

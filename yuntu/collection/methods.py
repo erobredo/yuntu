@@ -7,7 +7,7 @@ from  tempfile import NamedTemporaryFile
 from yuntu.core.db.base import embeddedDb,RAMDb
 from yuntu.core.db.methods import lDbUpdateField,lDbTimedInsert
 from yuntu.core.db.utils import addTimeFields,loadParser
-from yuntu.core.datastore.base import simpleDatastore, directDatastore,mongodbDatastore
+from yuntu.core.datastore.base import simpleDatastore, directDatastore,mongodbDatastore,audioMothDatastore,postgresqlDatastore
 from yuntu.collection.server import yuntuServer
 from yuntu.collection.utils import audioIterator, audioArray, metadataIterator, metadataArray, specIterator, specArray, buildColDirStruct
 from yuntu.core.common.utils import loadJsonFile,dumpJsonFile,binaryMD5,cleanDirectory
@@ -139,12 +139,18 @@ def collectionTimedInsert(col,input,parseSeq):
         ds = input
     else:
         ds = directDatastore(input)
-    return lDbTimedInsert(col.db,ds.getData(),parseSeq,col.timeField,col.tzField)
+    return lDbTimedInsert(col.db,ds.getData(),parseSeq,col.timeField,col.tzField,col.timeFormat)
 
 def collectionPullDatastore(col,dsDict,parseSeq):
     if dsDict["type"] == "mongodb":
         ds = mongodbDatastore(dsDict)
         return col.insertMedia(ds,parseSeq)
+    elif dsDict["type"] == "audioMoth":
+        ds = audioMothDatastore(dsDict)
+        return col.insertMedia(ds,parseSeq) 
+    elif dsDict["type"] == "postgresql":
+        ds = postgresqlDatastore(dsDict)
+        return col.insertMedia(ds,parseSeq) 
     else:
         raise ValueError("Datastore not implemented")
 
@@ -202,7 +208,7 @@ def collectionGetSpecs(col,id=None,query=None,readSr=None,n_fft=1024,hop_length=
 def collectionBuildResampledMedia(col,dirPath,out_sr=24000,media_format="wav",chop=60,thresh=1,orid=None,query=None,iterate=False):
     rsdir = "sr_"+str(out_sr)
     if col.virtual and dirPath is None:
-        raise ValueError("'dirPath' is mandatory for virtual collections")
+        raise ValueError("'dirPath' is mandatory for virtual collections.")
     elif not col.virtual and dirPath is None:
         out_dir = os.path.join(col.colPath,"media",rsdir)
     else:
@@ -220,8 +226,8 @@ def collectionBuildResampledMedia(col,dirPath,out_sr=24000,media_format="wav",ch
         return f()
     else:
         return [au.writeChunks(basePath=os.path.join(out_dir,au.md5),chop=chop,thresh=thresh,media_format=media_format,sr=out_sr) for au in media]
-    
 
+    
 def collectionDump(col,dirPath,overwrite=False):
     if col.virtual:
         return collectionVirtualDump(col,dirPath,overwrite)

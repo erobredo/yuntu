@@ -66,6 +66,7 @@ class simpleSoundscape(metaSoundscape):
         self.outs = []
         self.overwrite = overwrite
         self.info =  {"name":self.name,"dirPath":dirPath,"collection":None,"creation":None,"modification":None,"type":"simpleSoundscape","metadata":metadata}
+        self.splits = None
         self.graph = {}
 
 
@@ -130,6 +131,16 @@ class simpleSoundscape(metaSoundscape):
                 "size" : -1,
                 "replace" : False
             },
+            "datasetParams" : {
+                "channels" : "__all__",
+                "n_fft":1024,
+                "hop_length":512,
+                "tStep" : 60,
+                "fBins" : 10,
+                "fLimits" : [0,10000],
+                "readSr" : None,
+                "transformations": None
+            }
         }
         return config
 
@@ -139,14 +150,14 @@ class simpleSoundscape(metaSoundscape):
     # def getEnergy(self,group=None,compute=True):
     #     return scMethods.soundscapeGetEnergy(self,group,compute)
 
-    def getSplits(self,group=None,compute=True):
-        return scMethods.soundscapeGetSplits(self,group,compute)
+    def getSplits(self,group=None,compute=True,baseName=""):
+        return scMethods.soundscapeGetSplits(self,group,compute,baseName=baseName)
 
-    def getSample(self,group=None,compute=True):
-        return scMethods.soundscapeGetSample(self,group,compute)
+    def getSample(self,group=None,compute=True,baseName=""):
+        return scMethods.soundscapeGetSample(self,group,compute,baseName=baseName)
 
-    def getNode(self,nodeName,compute=True):
-        return scMethods.soundscapeGetNode(self,nodeName,compute)
+    def getNode(self,nodeName,group=None,compute=True,overwrite=False,baseName=""):
+        return scMethods.soundscapeGetNode(self,nodeName=nodeName,group=group,compute=compute,baseName=baseName)
 
     def getGroups(self):
         return scMethods.soundscapeGetGroups(self)
@@ -215,6 +226,16 @@ class cronoSoundscape(simpleSoundscape):
                 "globals" : None,
                 "configs" : []
             },
+            "datasetParams" : {
+                "channels" : "__all__",
+                "n_fft":1024,
+                "hop_length":512,
+                "tStep" : 60,
+                "fBins" : 10,
+                "fLimits" : [0,10000],
+                "readSr" : None,
+                "transformations": None
+            },
             "cronoParams" : {
                 "startDate" : None,
                 "timeZone" : None,
@@ -227,6 +248,9 @@ class cronoSoundscape(simpleSoundscape):
 
     def setCronoParams(self,cronoParams):
         return scMethods.soundscapeSetCronoParams(self,cronoParams)
+    
+    def plot(self,varnames=[],orids=[],splits=None,group=None,plot_type="concat",viewTz=None,plotTimeFormat="%H:%M",nlabels=21,xlabel="T",ylabel="F (kHz)",xlabels=[],ylabels=[],cmap="terrain",interpolation="sinc",figsize=(20,10),path=None,baseName="",timeLimits=None,freqLimits=None):
+        return scMethods.soundscapeCronoPlot(self,varnames=varnames,orids=orids,splits=splits,group=group,plot_type=plot_type,viewTz=viewTz,plotTimeFormat=plotTimeFormat,nlabels=nlabels,xlabel=xlabel,ylabel=ylabel,xlabels=xlabels,ylabels=ylabels,cmap=cmap,interpolation=interpolation,figsize=figsize,path=path,baseName=baseName,timeLimits=timeLimits,freqLimits=freqLimits)
 
 
 

@@ -1,6 +1,7 @@
 import os
 import datetime,time
 import pytz
+from pytz import timezone
 from yuntu.core.common.utils import loadMethodFromFile
 from yuntu.core.audio.base import Audio
 from yuntu.core.common.utils import binaryMD5
@@ -47,13 +48,65 @@ def describeAudio(path,timeexp,md5):
 
     return au.getMediaInfo(),md5
 
-def standarizeTime(strTime,timeZone,format='%d-%m-%Y %H:%M:%S'):
+def standardizeTime(strTime,timeZone,format='%d-%m-%Y %H:%M:%S'):
     tzObj = pytz.timezone(timeZone)
     
     return tzObj.localize(datetime.datetime.strptime(strTime,format))
 
+def transformTime(locTime,newTz):
+    return locTime.astimezone(tz=timezone(newTz))
+    
+
 def timeAsSeconds(dTime):
-    return time.mktime(dTime.timetuple())
+    tzObj = pytz.timezone("UTC")
+    globalStart = tzObj.localize(datetime.datetime(1970,1,1,0,0,0))
+    
+    return (dTime-globalStart).total_seconds()
+
+def stripName(string):
+    new_string = ""
+    for character in string:
+        if character == " ":
+            new_string += "_"
+        elif character.isalnum():
+            new_string += character
+            
+    return new_string
+
+def catToStrTime(cat,unit,startDate,timeZone="UTC",timeFormat='%d-%m-%Y %H:%M:%S',transformTz=None,outFormat="%H:%M"):
+    seconds = cat*unit
+    standardStart = standardizeTime(startDate,timeZone,timeFormat)
+
+    if transformTz:
+        dtime = transformTime(standardStart,transformTz)  + datetime.timedelta(seconds=seconds)
+        return dtime.strftime(outFormat)
+    else:
+        return standardStart.strftime(outFormat)
+
+
+def timeAsCat(standardStartStr,startDate,timeZone,timeFormat,unit,modulo,transformTz=None):
+    modulo_seconds = unit*modulo
+    standardStart = datetime.datetime.fromisoformat(standardStartStr)
+    
+    if transformTz is not None:
+        standardAbsStart = transformTime(standardizeTime(startDate,timeZone,timeFormat),transformTz)
+    else:
+        standardAbsStart = standardizeTime(startDate,timeZone,timeFormat)
+            
+    delta_from_start = standardStart-standardAbsStart
+    remainder = delta_from_start % datetime.timedelta(seconds=modulo_seconds)
+    
+    return int(round(remainder/datetime.timedelta(seconds=unit))) % modulo
+    
+
+# def timeAsCat(absStart,absStop,startDate,timeZone,timeFormat,unit,modulo,transformTz=None):
+    
+#     if transformTz is not None:
+#         standardAbsStart = timeAsSeconds(transformTime(standardizeTime(startDate,timeZone,timeFormat),transformTz))
+#     else:
+#         standardAbsStart = timeAsSeconds(standardizeTime(startDate,timeZone,timeFormat))
+        
+#     return int(round((float(absStart+absStop)/2 - standardAbsStart)/unit))%modulo
 
 def getTimeFields(metadata,media_info,timeField,tzField,format):
 
@@ -61,7 +114,7 @@ def getTimeFields(metadata,media_info,timeField,tzField,format):
     timeZone = metadata[tzField]
     duration = media_info["duration"]
     
-    standardStart = standarizeTime(strTime,timeZone,format)
+    standardStart = standardizeTime(strTime,timeZone,format)
     absStart = timeAsSeconds(standardStart)
 
     standardStop = standardStart + datetime.timedelta(seconds=duration)

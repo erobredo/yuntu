@@ -5,6 +5,7 @@ import librosa.display
 import soundfile as sf
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy.signal
 
 
 def mediaSize(path):
@@ -41,6 +42,13 @@ def channelMean(sig,keepdims=False):
 def stft(sig,n_fft,hop_length,win_length=None, window='hann', center=True, pad_mode='reflect'):
     return librosa.stft(sig,n_fft,hop_length,win_length=win_length, window=window, center=center, pad_mode=pad_mode)
 
+#def stft(sig,n_fft,hop_length,win_length=None, window='hann', center=True, pad_mode='reflect'):
+    
+#    return scipy.signal.stft(sig,window=window,nperseg=n_fft,noverlap=hop_length)
+
+def slice_spec(spec,max_feq,min_freq,duration,time_steps,freq_steps):
+    sshape = spec.shape
+    if
 def spectrogram(sig,n_fft,hop_length):
     return np.abs(stft(sig,n_fft,hop_length))
 

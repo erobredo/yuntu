@@ -75,6 +75,10 @@ class Audio(Media):
 
     def writeChunks(self,basePath,chop,thresh,media_format="wav",sr=None):
         return auMethods.audioWriteChunks(self,basePath,chop,thresh,media_format,sr)
+    
+    def listen(self):
+        return auMethods.audioListen(self)
+
 
 
 

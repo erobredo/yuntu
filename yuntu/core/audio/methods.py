@@ -24,6 +24,10 @@ def audioReadBasicInfo(au):
 
     return True
 
+def audioListen(au):
+    from IPython.display import Audio
+    return Audio(data=au.getSignal(), rate=au.sr)
+
 def audioReadMedia(au):
     offset = 0.0
     duration = None
@@ -112,7 +116,7 @@ def audioGetSpec(au, channel=None, n_fft=1024, hop_length=512,preProcess=None):
         sig = au.getSignal(preProcess)
         sig = auUtils.sigChannel(au.getSignal(preProcess),channel,au.nchannels)
 
-
+    
 
     return auUtils.spectrogram(sig,n_fft=n_fft,hop_length=hop_length), auUtils.specFrequencies(au.sr,n_fft)
 

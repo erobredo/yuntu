@@ -1,7 +1,12 @@
+import os
 from pymongo import MongoClient
 from bson.objectid import ObjectId
+import datetime
+import psycopg2
+import psycopg2.extras
 from collections import OrderedDict
 from yuntu.core.datastore.utils import hashDict
+
 
 def datastoreGetSpec(ds):
     dSpec = {}
@@ -17,7 +22,7 @@ def datastoreGetType(ds):
 
 def datastoreGetConf(ds):
     dConf = {}
-    for key in ["host","datastore","target","filter","fields","ukey"]:
+    for key in ds.inputSpec["conf"]:
         dConf[key] = ds.inputSpec["conf"][key]
 
     return dConf
@@ -29,6 +34,24 @@ def datastoreGetHash(ds):
     formatedConf = ds.getConf()
 
     return hashDict(formatedConf)
+
+def datastorePostgresqlGetData(ds):
+    def f(dsSpec):
+        dsConf = dsSpec["conf"]
+        conn = psycopg2.connect("dbname='"+dsConf["datastore"]+"' user='"+dsConf["user"]+"' host='"+dsConf["host"]+"' password='"+dsConf["password"]+"'")
+        cur = conn.cursor(cursor_factory = psycopg2.extras.RealDictCursor)
+        cur.execute(dsConf["target"])
+        
+        for row in cur:
+            obj = {}
+            fkey = str(row[dsConf["ukey"]])
+            for key in row.keys():
+                obj[key] = row[key]    
+            obj[dsConf["ukey"]] = fkey
+            
+            yield {"datastore":dsSpec, "source":{"fkey":fkey},"metadata":obj}
+            
+    return f(ds.getSpec())
 
 def datastoreMongodbGetData(ds):
     def f(dsSpec):
@@ -63,18 +86,30 @@ def datastoreAudioMothGetData(ds):
         for i in range(len(allFiles)):
             fkey = allFiles[i]
             obj = {}
-
-            tArr = os.path.splitext(fkey)[0].split("_")
-            year = tArr[0][0:4]
-            month = tArr[0][4:6]
-            day = tArr[0][6:]
-            hour = tArr[1][0:2]
-            minute = tArr[1][2:4]
-            second = tArr[1][4:]
-
-            obj["time"] = day+"-"+month+"-"+year+" "+hour+":"+minute+":"+second
-            obj["tZone"] = "UTC"
+            obj["path"] = os.path.join(dsConf["dataDir"],fkey)
             
+            with open(obj["path"], 'rb') as file:
+                buf_header = file.read(200)
+                try:
+                    obj["voltage"] = float(buf_header[166:169])
+                    obj["time"] = buf_header[68:87].decode("utf-8")
+                    obj["tZone"] = buf_header[89:92].decode("utf-8")
+                    if "-" in buf_header[84:94].decode("utf-8"):
+                        obj["tZone"] = buf_header[84:94].decode("utf-8")
+                    obj["device_id"] = buf_header[107:123].decode("utf-8")
+                    obj["gain"] = float(buf_header[140:141])
+                except:
+                    obj["voltage"] = float(buf_header[168:171])
+                    obj["time"] = buf_header[68:87].decode("utf-8")
+                    obj["tZone"] = buf_header[89:92].decode("utf-8")
+                    if "-" in buf_header[84:94].decode("utf-8"):
+                        obj["tZone"] = buf_header[84:94].decode("utf-8")
+                    obj["device_id"] = buf_header[109:125].decode("utf-8")
+                    obj["gain"] = float(buf_header[142:143])
+
+                file.close()
+                
+
             yield {"datastore":dsSpec, "source":{"fkey":fkey},"metadata":obj}
 
     return f(ds.getSpec())

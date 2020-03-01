@@ -7,11 +7,12 @@ import dask.dataframe as dd
 from dask.threaded import get
 from dask.delayed import delayed
 from dask.optimization import cull,inline,inline_functions,fuse
-from yuntu.core.db.utils import timeAsSeconds,standarizeTime
+from yuntu.core.db.utils import timeAsCat
 from yuntu.core.audio.base import Audio
 
 
 def writeParquet(node,path):
+    print("Writing parquet to "+path)
     return node.to_parquet(path,compression="GZIP")
 
 
@@ -25,8 +26,17 @@ def projectMetadata(obj,fields):
     newObj["fileDuration"] = obj["media_info"]["duration"]
 
     for key in fields:
-        if key in obj["metadata"]:
-            newObj[key] = obj["metadata"][key]
+        key_split = key.split(".")
+        if len(key_split) > 1:
+            
+            val = obj["metadata"][key_split[0]]
+            for i in range(1,len(key_split)):
+                val = val[key_split[i]]
+                
+            newObj[key] = val
+        else:
+            if key in obj["metadata"]:
+                newObj[key] = obj["metadata"][key]
 
     return newObj
 
@@ -41,56 +51,57 @@ def doTransform(e,eTransform,transformDict):
     else:
         return e
     
+    
 def sliceEnergy(spec,eCols,fCuts,duration,start,stop,unitSize,eTransform,config):
     results = {}
-    #try:
-    fbins,tbins = spec.shape
-    if stop - start > config["tStep"]:
-        e = spec
-        nbins = tbins
-    else:
-        startBin = min(int(round((float(tbins)/duration)*start)),tbins-1)
-        stopBin = min(startBin+unitSize,tbins-1)
-        nbins = stopBin-startBin
-        e = spec[:,startBin:stopBin]
-
-    if nbins < float(unitSize)/2:
-        raise ValueError("Generated empty slice!")
-
-    results["chunkTbins"] = nbins
-    results["chunkWeight"] = float(nbins)/unitSize
-    
-    if eTransform["full_spec"] != "pass":
-        tConfig = config["transformations"]["full_spec"].copy()
-        if "kwargs" in tConfig:
-            #Use available context variables
-            for kname in tConfig["kwargs"]:
-                if tConfig["kwargs"][kname] == "$fCuts":
-                    tConfig["kwargs"][kname] = fCuts
-
-        global_results =  doTransform(e,eTransform["full_spec"],tConfig)
-        #Ensure transformation returns a dictionary with correct keys.
-        for i in range(len(eCols)):
-            results[eCols[i]] = global_results[eCols[i]]
-
-        return results
-
-    if eTransform["spec"] != "pass":
-        e = doTransform(e,eTransform["spec"],config["transformations"]["spec"])
-    #e = np.sum(e,axis=1)
-
-    for i in range(len(eCols)):
-        cut = fCuts[i]
-        if cut[0] != cut[1]:
-            eCut = e[cut[0]:cut[1],:]
-            eCut = doTransform(eCut,eTransform["aggr"],config["transformations"]["aggr"])
+    try:
+        fbins,tbins = spec.shape
+        if stop - start > config["tStep"]:
+            e = spec
+            nbins = tbins
         else:
-            eCut = None
+            startBin = min(int(round((float(tbins)/duration)*start)),tbins-1)
+            stopBin = min(startBin+unitSize,tbins-1)
+            nbins = stopBin-startBin
+            e = spec[:,startBin:stopBin]
 
-        results[eCols[i]] = eCut
-    #except:
-    #    for col in ["chunkTbins","chunkWeight"]+eCols:
-    #        results[col] = None
+        if nbins < float(unitSize)/2:
+            raise ValueError("Generated empty slice!")
+
+        results["chunkTbins"] = nbins
+        results["chunkWeight"] = float(nbins)/unitSize
+
+        if eTransform["full_spec"] != "pass":
+            tConfig = config["transformations"]["full_spec"].copy()
+            if "kwargs" in tConfig:
+                #Use available context variables
+                for kname in tConfig["kwargs"]:
+                    if tConfig["kwargs"][kname] == "$fCuts":
+                        tConfig["kwargs"][kname] = fCuts
+
+            global_results =  doTransform(e,eTransform["full_spec"],tConfig)
+            #Ensure transformation returns a dictionary with correct keys.
+            for i in range(len(eCols)):
+                results[eCols[i]] = global_results[eCols[i]]
+
+            return results
+
+        if eTransform["spec"] != "pass":
+            e = doTransform(e,eTransform["spec"],config["transformations"]["spec"])
+        #e = np.sum(e,axis=1)
+
+        for i in range(len(eCols)):
+            cut = fCuts[i]
+            if cut[0] != cut[1]:
+                eCut = e[cut[0]:cut[1],:]
+                eCut = doTransform(eCut,eTransform["aggr"],config["transformations"]["aggr"])
+            else:
+                eCut = None
+
+            results[eCols[i]] = eCut
+    except:
+        for col in ["chunkTbins","chunkWeight"]+eCols:
+            results[col] = 0
 
     return results
 
@@ -200,11 +211,9 @@ def splitTime(obj,eCols,eTransform,config):
     return out
 
 
-def calendarize(row,config):
-    standardStart = standarizeTime(config["startDate"],config["timeZone"],config["timeFormat"])
-    absStart = timeAsSeconds(standardStart)
-    row["timeCell"] = int(round((float(row["chunkAbsStart"]+row["chunkAbsStop"])/2 - absStart)/config["unit"]))%config["modulo"]
-
+def calendarize(row,config,fieldName,transformTz):
+    row[fieldName] = timeAsCat(row["standardStart"],config["startDate"],config["timeZone"],config["timeFormat"],config["unit"],config["modulo"],transformTz)
+    
     return row
 
 def loadFragment(data,groupfields,config):
@@ -227,7 +236,7 @@ def makeSplits(fragment,basicmeta,splitmeta,groupmeta,eCols,eTransform,config):
 def makeCalendar(splits,config):
     meta = [x for x in zip(splits.columns.values,splits.dtypes.values)]+[("timeCell",np.dtype('int64'))]
 
-    return splits.apply(calendarize,meta=meta,axis=1,config=config)
+    return splits.apply(calendarize,meta=meta,axis=1,config=config,fieldName="timeCell",transformTz=None)
 
 def makeCronoCounts(splits):
     return splits.groupby(['timeCell'])["orid"].agg(['count'])

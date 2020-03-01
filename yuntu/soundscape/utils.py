@@ -26,5 +26,6 @@ def filterExpr(group):
             val = "'"+val+"'"
         expr += " & "+cols[i]+"=="+str(val)
 
-    return expr
+    return ex
 
+    

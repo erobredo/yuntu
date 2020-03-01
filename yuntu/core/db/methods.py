@@ -280,55 +280,60 @@ def lDbInsert(db,dataArray,parseSeq=[],timeConf=None):
     cursor = cnn.cursor()
 
     for dataObj in dataArray:
-        dsconf = dataObj["datastore"]
-        source = dataObj["source"]
-        rawMetadata = dataObj["metadata"]
+        try:
+            dsconf = dataObj["datastore"]
+            source = dataObj["source"]
+            rawMetadata = dataObj["metadata"]
 
-        dsmatches = cursor.execute('SELECT * FROM {tn} WHERE hash = {hash}'.format(tn="datastores",hash="'"+dsconf["hash"]+"'")).fetchall()
+            dsmatches = cursor.execute('SELECT * FROM {tn} WHERE hash = {hash}'.format(tn="datastores",hash="'"+dsconf["hash"]+"'")).fetchall()
 
-        if len(dsmatches) > 0:
-            source["source_id"] = dsmatches[0]["id"]
-        else:
+            if len(dsmatches) > 0:
+                source["source_id"] = dsmatches[0]["id"]
+            else:
+                cursor.execute("""
+                    INSERT INTO datastores (hash,type,conf,metadata)
+                        VALUES (?,?,?,?)
+                    """, (dsconf["hash"],dsconf["type"],json.dumps(dsconf["conf"]),json.dumps(dsconf["metadata"])))
+
+                source["source_id"] = cursor.lastrowid
+
+
             cursor.execute("""
-                INSERT INTO datastores (hash,type,conf,metadata)
-                    VALUES (?,?,?,?)
-                """, (dsconf["hash"],dsconf["type"],json.dumps(dsconf["conf"]),json.dumps(dsconf["metadata"])))
+                INSERT INTO original (source,metadata)
+                    VALUES (?,?)
+                """, (json.dumps(source),json.dumps(rawMetadata)))
 
-            source["source_id"] = cursor.lastrowid
-
-
-        cursor.execute("""
-            INSERT INTO original (source,metadata)
-                VALUES (?,?)
-            """, (json.dumps(source),json.dumps(rawMetadata)))
-
-        orid = cursor.lastrowid
-        metadata = dataObj["metadata"]
-        metadata = dbUtils.sequentialTransform(metadata,parseSeq,parsers,parsersDir)
+            orid = cursor.lastrowid
+            metadata = dataObj["metadata"]
+            metadata = dbUtils.sequentialTransform(metadata,parseSeq,parsers,parsersDir)
 
 
 
 
-        path = metadata["path"]
-        timeexp = metadata["timeexp"]
+            path = metadata["path"]
+            timeexp = metadata["timeexp"]
 
-        md5 = None
-        if "md5" in metadata:
-            md5 = metadata["md5"]
+            md5 = None
+            if "md5" in metadata:
+                md5 = metadata["md5"]
 
-        media_info,md5 = dbUtils.describeAudio(path,timeexp,md5)
-        media_info["md5"] = md5
+            media_info,md5 = dbUtils.describeAudio(path,timeexp,md5)
+            media_info["md5"] = md5
 
-        if timeConf is not None:
-            timeField = timeConf["timeField"]
-            tzField = timeConf["tzField"]
-            format = timeConf["format"]
-            metadata = dbUtils.getTimeFields(metadata,media_info,timeField,tzField,format)
+            if timeConf is not None:
+                timeField = timeConf["timeField"]
+                tzField = timeConf["tzField"]
+                format = timeConf["format"]
+                metadata = dbUtils.getTimeFields(metadata,media_info,timeField,tzField,format)
 
-        cursor.execute("""
-            INSERT OR IGNORE INTO parsed (orid,md5,path,original_path,parse_seq,media_info,metadata)
-                VALUES (?,?,?,?,?,?,?)
-            """, (orid,md5,path,path,json.dumps(parseSeq),json.dumps(media_info),json.dumps(metadata)))
+            cursor.execute("""
+                INSERT OR IGNORE INTO parsed (orid,md5,path,original_path,parse_seq,media_info,metadata)
+                    VALUES (?,?,?,?,?,?,?)
+                """, (orid,md5,path,path,json.dumps(parseSeq),json.dumps(media_info),json.dumps(metadata)))
+        except:
+           print("Error inserting metadata :",dataObj)
+            
+        
 
     cnn.commit()
 
