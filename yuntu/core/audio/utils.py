@@ -21,7 +21,7 @@ def readInfo(path):
     wav = wave.open(path)
     return wav.getframerate(), wav.getnchannels(), wav.getsampwidth(), wav.getnframes(), mediaSize(path)
 
-    
+
 def read(path,sr,offset=0.0,duration=None):
     return librosa.load(path,sr=sr,offset=offset,duration=duration,mono=False)
 
@@ -35,20 +35,13 @@ def sigChannel(sig,channel,nchannels):
         return np.squeeze(sig[[channel],:])
     else:
         return sig
-    
+
 def channelMean(sig,keepdims=False):
     return np.mean(sig,axis=0,keepdims=keepdims)
 
 def stft(sig,n_fft,hop_length,win_length=None, window='hann', center=True, pad_mode='reflect'):
     return librosa.stft(sig,n_fft,hop_length,win_length=win_length, window=window, center=center, pad_mode=pad_mode)
 
-#def stft(sig,n_fft,hop_length,win_length=None, window='hann', center=True, pad_mode='reflect'):
-    
-#    return scipy.signal.stft(sig,window=window,nperseg=n_fft,noverlap=hop_length)
-
-def slice_spec(spec,max_feq,min_freq,duration,time_steps,freq_steps):
-    sshape = spec.shape
-    if
 def spectrogram(sig,n_fft,hop_length):
     return np.abs(stft(sig,n_fft,hop_length))
 

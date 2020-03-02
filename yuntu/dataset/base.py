@@ -17,7 +17,7 @@ class metaDataset(object):
         pass
 
 class audioDataset(object):
-	__metaclass__ = ABCMeta
+    __metaclass__ = ABCMeta
 
     def __init__(self,name,collection=None,dirPath="",config=None,metadata=None,client=None,overwrite=False):
         self.name = name

@@ -262,14 +262,14 @@ def soundscapeSetLoadNodes(sc):
     if sc.getType() == "cronoSoundscape":
         sc.graph["splitMeta"] += [('chunkAbsStart', np.dtype('float64')), ('chunkAbsStop', np.dtype('float64'))]
         sc.setNode("cronoParams",sc.config["cronoParams"])
-    
-    sc.setNode("datasetMeta") = sc.graph["basicMeta"]+sc.graph["splitMeta"]+[("channel",np.dtype('int64'))]
+
+
 
     sc.setNode("globalParams",sc.config["globalParams"])
     sc.setNode("energyParams",sc.config["energyParams"])
     sc.setNode("samplingParams",sc.config["samplingParams"])
     sc.setNode("indexParams",sc.config["indexParams"])        
-    sc.setNode("datasetParams") = ("datasetParams",sc.config["datasetParams"])
+
 
     sigTransform = "pass"
     specTransform = "pass"
@@ -284,15 +284,9 @@ def soundscapeSetLoadNodes(sc):
         aggrTransform = loadTransform(sc.config["energyParams"]["transformations"]["aggr"])
     if "full_spec" in sc.config["energyParams"]["transformations"]:
         fullSpecTransform = loadTransform(sc.config["energyParams"]["transformations"]["full_spec"])
-        
-    datasetSigTransform = "pass"
-    datasetSpecTransform = "pass"
-    
-    if sc.config["datasetParams"]["transformations"] is not None:
-        if "signal" in sc.config["datasetParams"]["transformations"]:
-            datasetSigTransform = loadTransform(sc.config["datasetParams"]["transformations"]["signal"])
-        if "spec" in sc.config["datasetParams"]["transformations"]:
-            datasetSpecTransform = loadTransform(sc.config["datasetParams"]["transformations"]["spec"])
+
+
+
 
     if not (fullSpecTransform != "pass" or aggrTransform != "pass"):
         raise ValueError("If a full spectrogram transformation is not specified, at least one aggregation transformation must be applied.")
@@ -324,9 +318,7 @@ def soundscapeSetLoadNodes(sc):
     sc.setNode("dataInput",dData)
     sc.setNode("fragment",(scOps.loadFragment,"dataInput","groupFields","globalParams"))
     sc.setNode("splits",(scOps.makeSplits,"fragment","basicMeta","splitMeta","groupMeta","eCols","eTransform","energyParams"),True)
-    
-    sc.setNode("datasetTransform",{"signal":datasetSigTransform,"spec":datasetSpecTransform})
-    sc.setNode("dataset",(scOps.makeDataset,"fragment","datasetMeta","datasetTransform","datasetParams"),True)
+
 
     if sc.getType() == "cronoSoundscape":
         sc.setNode("calendarized",(scOps.makeCalendar,"splits","cronoParams"),True)
