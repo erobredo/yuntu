@@ -62,7 +62,7 @@ def collectionDrop(col):
 def collectionLoadInfo(col):
     infoPath = os.path.join(col.dirPath,col.name,"info.json")
     col.info = loadJsonFile(infoPath)
-    
+
     return True
 
 def collectionSaveInfo(col):
@@ -120,6 +120,9 @@ def collectionVirtualInit(col,dbDump=None):
 
     return True
 
+def collectionAnnotate(col,dataArr):
+    return col.db.annotate(dataArr)
+
 def collectionInsert(col,input,parseSeq):
     for i in range(len(parseSeq)):
         parseSeq[i] = collectionPersistParser(col,parseSeq[i])
@@ -147,10 +150,10 @@ def collectionPullDatastore(col,dsDict,parseSeq):
         return col.insertMedia(ds,parseSeq)
     elif dsDict["type"] == "audioMoth":
         ds = audioMothDatastore(dsDict)
-        return col.insertMedia(ds,parseSeq) 
+        return col.insertMedia(ds,parseSeq)
     elif dsDict["type"] == "postgresql":
         ds = postgresqlDatastore(dsDict)
-        return col.insertMedia(ds,parseSeq) 
+        return col.insertMedia(ds,parseSeq)
     else:
         raise ValueError("Datastore not implemented")
 
@@ -227,7 +230,7 @@ def collectionBuildResampledMedia(col,dirPath,out_sr=24000,media_format="wav",ch
     else:
         return [au.writeChunks(basePath=os.path.join(out_dir,au.md5),chop=chop,thresh=thresh,media_format=media_format,sr=out_sr) for au in media]
 
-    
+
 def collectionDump(col,dirPath,overwrite=False):
     if col.virtual:
         return collectionVirtualDump(col,dirPath,overwrite)
@@ -263,7 +266,7 @@ def collectionDoggyBag(col,dirPath="",outName=None,overwrite=True):
             raise ValueError("Output path exists but overwrite is False")
     else:
         os.makedirs(doggy_path)
-    
+
     doggy_media_dir = os.path.join(doggy_path,"media")
     if not os.path.exists(doggy_media_dir):
         os.makedirs(doggy_media_dir)
@@ -294,7 +297,7 @@ def collectionDoggyBag(col,dirPath="",outName=None,overwrite=True):
 
             writer.writerow(metadata)
             shutil.copyfile(oriPath,os.path.join(doggy_media_dir,fname))
-        
+
 
 
 def collectionMaterialize(col,dirPath=None,overwrite=False):
@@ -372,7 +375,7 @@ def collectionVirtualDump(col,dirPath,overwrite=False):
         else:
             raise ValueError("Collection directory exists. Please set overwrite=True.")
     else:
-        return collectionPersistVirtualStructure(col,dirPath,overwrite)  
+        return collectionPersistVirtualStructure(col,dirPath,overwrite)
 
 def collectionVirtualMaterialize(col,dirPath,overwrite=False):
     newColPath = os.path.join(dirPath,col.name)
@@ -419,26 +422,9 @@ def collectionBuildTime(col):
     col.info["type"] = "timedCollection"
     col.info["timeField"] = col.timeField
     col.info["tzField"] = col.tzField
-    
+
     return collectionSaveInfo(col)
 
 
 def collectionServer(col,port=9797):
     return yuntuServer(col,port)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

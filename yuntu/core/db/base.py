@@ -24,7 +24,7 @@ class metaDb(object):
 
     @abstractmethod
     def getType(self):
-        pass 
+        pass
 
 class embeddedDb(metaDb):
     __metaclass__ = ABCMeta
@@ -59,6 +59,9 @@ class embeddedDb(metaDb):
 
     def insert(self,dataArray,parseSeq=[],timeConf=None):
         return dbMethods.lDbInsert(self,dataArray,parseSeq,timeConf)
+
+    def annotate(self,dataArr):
+        return dbMethods.lDbAnnotate(self,dataArray)
 
     def connect(self):
         return dbMethods.lDbConnect(self)
@@ -110,5 +113,3 @@ class RAMDb(embeddedDb):
             name = self.name
 
         return embeddedDb(name,dirPath,dump=dbMethods.lDbAsStatements(self))
-        
-

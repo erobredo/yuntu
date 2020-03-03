@@ -30,6 +30,10 @@ setup(
         'erobredo@conabio.gob.mx'
     ),
     install_requires=[
+        'numpy',
+        'pandas',
+        'flask',
+        'pytz',
         'dask',
         'librosa',
         'pysqlite3',

@@ -53,7 +53,7 @@ def lDbParseQuery(query):
                         else:
                             raise ValueError("Not implemented")
                     else:
-                        subStatement += "json_extract(parse_seq,'$"+key.replace("parse_seq","")+"')" 
+                        subStatement += "json_extract(parse_seq,'$"+key.replace("parse_seq","")+"')"
                 else:
                     subStatement += key
 
@@ -181,7 +181,25 @@ def lDbCreateStructure(db):
             media_info JSON NOT NULL,
             metadata JSON NOT NULL,
             UNIQUE(md5),
-            FOREIGN KEY(orid) REFERENCES original(id)    
+            FOREIGN KEY(orid) REFERENCES original(id)
+        )
+        """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS annotations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            notetype TEXT NOT NULL,
+            orid INTEGER,
+            file_start DOUBLE NOT NULL,
+            file_end DOUBLE NOT NULL,
+            max_freq DOUBLE,
+            min_freq DOUBLE,
+            wkt TEXT,
+            label JSON NOT NULL,
+            groups JSON NOT NULL,
+            metadata JSON NOT NULL,
+            FOREIGN KEY(orid) REFERENCES original(id),
+            CHECK (notetype in ('weak','interval','bbox','linestring',
+            'multilinestring','polygon','multipolygon'))
         )
         """)
     cnn.commit()
@@ -255,7 +273,7 @@ def lDbUpdateParseSeq(db,parseSeq,orid=None,whereSt=None,operation="append"):
         for row in matches:
             orid,metadata,parse_seq = lDbParseSeqConcat(row,parseSeq,parsers=parsers,parsersDir=parsersDir)
             cursor.execute('UPDATE {tn} SET parse_seq = ?, metadata = ? WHERE orid = {orid}'.format(tn="parsed",orid=orid),(json.dumps(parse_seq),json.dumps(metadata)))
-    
+
     elif operation == "overwrite":
         for row in matches:
             orid,metadata,parse_seq = lDbParseSeqOverwrite(row,cursor,parseSeq,parsers=parsers,parsersDir=parsersDir)
@@ -270,6 +288,42 @@ def lDbUpdateParseSeq(db,parseSeq,orid=None,whereSt=None,operation="append"):
 def lDbTimedInsert(db,dataArray,parseSeq,timeField,tzField,format='%d-%m-%Y %H:%M:%S'):
     return db.insert(dataArray,parseSeq,timeConf={"timeField":timeField,"tzField":tzField,"format":format})
 
+
+def lDbAnnotate(db,dataArray):
+    cnn = db.connection
+    cursor = cnn.cursor()
+
+    for dataObj in dataArray:
+        try:
+            if dataObj["notetype"] in ['bbox', 'linestring', 'multilinestring',
+                                       'polygon', 'multipolygon']:
+                if dataObj["max_freq"] is None or dataObj["max_freq"] is None \
+                  or dataObj["wkt"] is None:
+                    raise Exception("'max_freq','min_freq' and 'wkt' shold be \
+                                       defined for this type of annotation")
+            cursor.execute("""
+                INSERT INTO original (notetype,orid,start_time,end_time,
+                max_freq,min_freq,wkt,label,groups,metadata)
+                    VALUES (?,?,?,?,?,?,?,?,?)
+                """, (dataObj["notetype"],
+                      dataObj["orid"],
+                      dataObj["file_start"],
+                      dataObj["file_end"],
+                      dataObj["max_freq"],
+                      dataObj["min_freq"],
+                      dataObj["wkt"],
+                      json.dumps(dataObj["label"]),
+                      json.dumps(dataObj["groups"]),
+                      json.dumps(dataObj["metadata"])))
+
+        except Exception as ex:
+            print(ex)
+
+
+
+    cnn.commit()
+
+    return True
 
 def lDbInsert(db,dataArray,parseSeq=[],timeConf=None):
 
@@ -332,21 +386,21 @@ def lDbInsert(db,dataArray,parseSeq=[],timeConf=None):
                 """, (orid,md5,path,path,json.dumps(parseSeq),json.dumps(media_info),json.dumps(metadata)))
         except:
            print("Error inserting metadata :",dataObj)
-            
-        
+
+
 
     cnn.commit()
 
     return True
 
-def lDbFind(db,orid=None,query=None):
+def lDbFind(db,orid=None,query=None, table="parsed"):
     wStatement = None
     if query is not None:
         wStatement = lDbParseQuery(query)
 
-    return lDbSelect(db,orid,wStatement)
+    return lDbSelect(db,orid,wStatement,table=table)
 
-def lDbSelect(db,orid=None,whereSt=None,freeSt=None):
+def lDbSelect(db,orid=None,whereSt=None,freeSt=None,table="parsed"):
     cnn = db.connection
     cursor = cnn.cursor()
 
@@ -354,15 +408,15 @@ def lDbSelect(db,orid=None,whereSt=None,freeSt=None):
         matches = cursor.execute('SELECT {freeSt}'.format(freeSt=freeSt)).fetchall()
     else:
         if whereSt is not None:
-            matches = cursor.execute('SELECT * FROM {tn} WHERE {whereSt}'.format(tn="parsed",whereSt=whereSt)).fetchall()
+            matches = cursor.execute('SELECT * FROM {tn} WHERE {whereSt}'.format(tn=table,whereSt=whereSt)).fetchall()
         elif orid is not None:
-            matches = cursor.execute('SELECT * FROM {tn} WHERE orid = {orid}'.format(tn="parsed",orid=orid)).fetchall()
+            matches = cursor.execute('SELECT * FROM {tn} WHERE orid = {orid}'.format(tn=table,orid=orid)).fetchall()
         else:
-            matches = cursor.execute('SELECT * FROM {tn}'.format(tn="parsed")).fetchall()
+            matches = cursor.execute('SELECT * FROM {tn}'.format(tn=table)).fetchall()
 
     return matches
 
-def lDbCount(db,where=None,query=None,groupby=None):
+def lDbCount(db,where=None,query=None,groupby=None,table="parsed"):
 
     whereSt = None
     if where is not None:
@@ -374,18 +428,18 @@ def lDbCount(db,where=None,query=None,groupby=None):
     cursor = cnn.cursor()
 
     if whereSt is not None:
-        dcount = cursor.execute('SELECT count(*) as count FROM {tn} WHERE {whereSt}'.format(tn="parsed",whereSt=whereSt)).fetchone()
+        dcount = cursor.execute('SELECT count(*) as count FROM {tn} WHERE {whereSt}'.format(tn=table,whereSt=whereSt)).fetchone()
     else:
-        dcount = cursor.execute('SELECT count(*) as count FROM {tn}'.format(tn="parsed",whereSt=whereSt)).fetchone()
+        dcount = cursor.execute('SELECT count(*) as count FROM {tn}'.format(tn=table,whereSt=whereSt)).fetchone()
 
-    return dcount   
+    return dcount
 
-def lDbRemove(db,orid=None,where=None,query=None):
+def lDbRemove(db,orid=None,where=None,query=None,table="parsed"):
 
     if where is not None:
-        matches = lDbSelect(db,orid,where)
+        matches = lDbSelect(db,orid,where,table=table)
     else:
-        matches = lDbFind(db,orid,query)
+        matches = lDbFind(db,orid,query,table=table)
 
     cnn = db.connection
     cursor = cnn.cursor()
@@ -396,17 +450,17 @@ def lDbRemove(db,orid=None,where=None,query=None):
     cnn.commit()
     return matches
 
-def lDbUpdateField(db,field,value,orid=None,query=None):
+def lDbUpdateField(db,field,value,orid=None,query=None,table="parsed"):
     whereSt = lDbParseQuery(query)
     cnn = db.connection
     cursor = cnn.cursor()
 
     if whereSt is not None:
-        cursor.execute('UPDATE {tn} SET {field} = ? WHERE {whereSt}'.format(tn="parsed",field=field,whereSt=whereSt),(value,))
+        cursor.execute('UPDATE {tn} SET {field} = ? WHERE {whereSt}'.format(tn=table,field=field,whereSt=whereSt),(value,))
     elif orid is not None:
-        cursor.execute('UPDATE {tn} SET {field} = ? WHERE orid = {orid}'.format(tn="parsed",field=field,orid=orid),(value,))
+        cursor.execute('UPDATE {tn} SET {field} = ? WHERE orid = {orid}'.format(tn=table,field=field,orid=orid),(value,))
     else:
-        cursor.execute('UPDATE {tn} SET {field} = ?'.format(tn="parsed",field=field),(value,))
+        cursor.execute('UPDATE {tn} SET {field} = ?'.format(tn=table,field=field),(value,))
 
     cnn.commit()
 
@@ -449,9 +503,3 @@ def lDbTransfer(db,newDirPath,newName=None,overwrite=False):
         print("In memory database, transfering to disk...")
         db.toDisk(newDirPath,newName).close()
         return newPath
-
-
-
-
-
-

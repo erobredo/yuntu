@@ -94,6 +94,9 @@ class simpleCollection(metaCollection):
     def insertMedia(self,input,parseSeq=None):
         return colMethods.collectionInsert(self,input,parseSeq)
 
+    def annotate(self,dataArr):
+        return colMethods.collectionAnnotate(self,dataArr)
+
     def dropMedia(self,where=None,query=None):
         return colMethods.collectionDropMedia(self,where,query)
 
@@ -108,7 +111,7 @@ class simpleCollection(metaCollection):
 
     def dump(self,dirPath,overwrite=False):
         return colMethods.collectionDump(self,dirPath,overwrite)
-        
+
     def materialize(self,dirPath=None,overwrite=False):
         return colMethods.collectionMaterialize(self,dirPath,overwrite)
 
@@ -150,7 +153,3 @@ class timedCollection(simpleCollection):
                 return self.buildTime()
             else:
                 return True
-
-
-
-
