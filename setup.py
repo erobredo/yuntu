@@ -18,7 +18,7 @@ setup(
     license='BSD License',
     description='Acoustic Analysis tools for Conabio',
     long_description=README,
-    url='https://github.com/CONABIO-audio/axon',
+    url='https://github.com/CONABIO-audio/yuntu',
     author=(
         'CONABIO, '
         'Dalia Camacho García Formentí, '
