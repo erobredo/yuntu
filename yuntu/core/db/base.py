@@ -61,7 +61,7 @@ class embeddedDb(metaDb):
         return dbMethods.lDbInsert(self,dataArray,parseSeq,timeConf)
 
     def annotate(self,dataArr):
-        return dbMethods.lDbAnnotate(self,dataArray)
+        return dbMethods.lDbAnnotate(self,dataArr)
 
     def connect(self):
         return dbMethods.lDbConnect(self)
@@ -75,11 +75,11 @@ class embeddedDb(metaDb):
     def dump(self,path,overwrite=False):
         return dbMethods.lDbDump(self,path,overwrite)
 
-    def find(self,id=None,query=None):
-        return dbMethods.lDbFind(self,id,query)
+    def find(self,id=None,query=None,table="parsed"):
+        return dbMethods.lDbFind(self,id,query,table)
 
-    def select(self,id=None,where=None):
-        return dbMethods.lDbSelect(self,id,where)
+    def select(self,id=None,where=None,freeSt=None,table="parsed"):
+        return dbMethods.lDbSelect(self,id,where,freeSt,table)
 
     def remove(self,id=None,where=None,query=None):
         return dbMethods.lDbRemove(self,id,query)

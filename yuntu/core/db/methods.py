@@ -42,7 +42,11 @@ def lDbParseQuery(query):
                 isDict = False
                 if isinstance(condition,dict):
                     isDict = True
-                if "metadata" in key:
+                if "groups" in key:
+                    subStatement += "json_extract(groups,'$."+key.replace("groups.","")+"')"
+                elif "label" in key:
+                    subStatement += "json_extract(label,'$."+key.replace("label.","")+"')"
+                elif "metadata" in key:
                     subStatement += "json_extract(metadata,'$."+key.replace("metadata.","")+"')"
                 elif "media_info" in key:
                     subStatement += "json_extract(media_info,'$."+key.replace("media_info.","")+"')"
@@ -54,6 +58,14 @@ def lDbParseQuery(query):
                             raise ValueError("Not implemented")
                     else:
                         subStatement += "json_extract(parse_seq,'$"+key.replace("parse_seq","")+"')"
+                elif "verts" in key:
+                    if isDict:
+                        if "$size" in condition:
+                            subStatement += "json_array_length(verts)"
+                        else:
+                            raise ValueError("Not implemented")
+                    else:
+                        subStatement += "json_extract(verts,'$"+key.replace("verts","")+"')"
                 else:
                     subStatement += key
 
@@ -129,7 +141,7 @@ def lDbNoRowFactory(cursor,row):
 def lDbRowFactory(cursor,row):
     d = {}
     for idx, col in enumerate(cursor.description):
-        if col[0] in ["metadata","media_info","parse_seq","source","conf"]:
+        if col[0] in ["metadata","media_info","parse_seq","source","conf","groups","label","verts"]:
             d[col[0]] = json.loads(row[idx])
         else:
             d[col[0]] = row[idx]
@@ -191,8 +203,12 @@ def lDbCreateStructure(db):
             orid INTEGER,
             file_start DOUBLE NOT NULL,
             file_end DOUBLE NOT NULL,
+            start_time DOUBLE NOT NULL,
+            end_time DOUBLE NOT NULL,
+            duration DOUBLE NOT NULL,
             max_freq DOUBLE,
             min_freq DOUBLE,
+            verts JSON,
             wkt TEXT,
             label JSON NOT NULL,
             groups JSON NOT NULL,
@@ -302,23 +318,25 @@ def lDbAnnotate(db,dataArray):
                     raise Exception("'max_freq','min_freq' and 'wkt' shold be \
                                        defined for this type of annotation")
             cursor.execute("""
-                INSERT INTO original (notetype,orid,start_time,end_time,
-                max_freq,min_freq,wkt,label,groups,metadata)
-                    VALUES (?,?,?,?,?,?,?,?,?)
+                INSERT INTO annotations (notetype,orid,file_start,file_end,
+                start_time,end_time,duration,max_freq,min_freq,verts,wkt,label,groups,metadata)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """, (dataObj["notetype"],
                       dataObj["orid"],
                       dataObj["file_start"],
                       dataObj["file_end"],
+                      dataObj["start_time"],
+                      dataObj["end_time"],
+                      dataObj["duration"],
                       dataObj["max_freq"],
                       dataObj["min_freq"],
+                      json.dumps(dataObj["verts"]),
                       dataObj["wkt"],
                       json.dumps(dataObj["label"]),
                       json.dumps(dataObj["groups"]),
                       json.dumps(dataObj["metadata"])))
-
-        except Exception as ex:
-            print(ex)
-
+        except:
+           print("Error inserting annotation :",dataObj)
 
 
     cnn.commit()

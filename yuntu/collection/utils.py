@@ -34,7 +34,11 @@ def metadataIterator(dataArr,mediaDir):
         if os.path.dirname(path) == "":
             dataArr[i]["media_info"]["path"] = os.path.join(mediaDir,path)
 
-        yield dataArr[i]  
+        yield dataArr[i]
+
+def annotationIterator(dataArr):
+    for i in range(len(dataArr)):
+        yield dataArr[i]
 
 def signalArray(dataArr,mediaDir,readSr):
     results = []

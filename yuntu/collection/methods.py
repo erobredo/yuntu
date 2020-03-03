@@ -184,6 +184,16 @@ def collectionQuery(col,id=None,query=None,iterate=True):
     else:
         return audioArray(matches,internal_data_dir)
 
+def collectionGetAnnotations(col,noteid=None,query=None,iterate=True):
+    if noteid is not None:
+        query = {"id":noteid}
+    matches = col.db.find(query=query,table="annotations")
+    
+    if iterate:
+        return annotationIterator(matches)
+    else:
+        return matches
+
 def collectionGetMetadata(col,id=None,query=None,iterate=True):
     matches = col.db.find(id,query)
     internal_data_dir = os.path.join(col.colPath,"media")

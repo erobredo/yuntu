@@ -59,17 +59,41 @@ def datastoreMongodbGetData(ds):
         client = MongoClient(dsConf["host"],maxPoolSize = 30)
         mDb = client[dsConf["datastore"]]
         collection = mDb[dsConf["target"]]
-
+ 
         if isinstance(dsConf["filter"],list):
             for rId in dsConf["filter"]:
                 obj = collection.find_one({"_id":ObjectId(rId)})
                 fkey = str(obj[dsConf["ukey"]])
                 obj[dsConf["ukey"]] = fkey
+                for key in obj:
+                    if isinstance(obj[key],ObjectId):
+                        obj[key] = str(obj[key])
+                    elif isinstance(obj[key],dict):
+                        for dkey in obj[key]:
+                            if isinstance(obj[key][dkey],ObjectId):
+                                obj[key][dkey] = str(obj[key][dkey])
+                            elif isinstance(obj[key][dkey],dict):
+                                for tkey in obj[key][dkey]:
+                                    if isinstance(obj[key][dkey][tkey],ObjectId):
+                                        obj[key][dkey][tkey] = str(obj[key][dkey][tkey])
+                                
+                            
                 yield {"datastore":dsSpec, "source":{"fkey":fkey},"metadata":obj}
         else:
             for obj in collection.find(dsConf["filter"],dsConf["fields"]):
                 fkey = str(obj[dsConf["ukey"]])
                 obj[dsConf["ukey"]] = fkey
+                for key in obj:
+                    if isinstance(obj[key],ObjectId):
+                        obj[key] = str(obj[key])
+                    elif isinstance(obj[key],dict):
+                        for dkey in obj[key]:
+                            if isinstance(obj[key][dkey],ObjectId):
+                                obj[key][dkey] = str(obj[key][dkey])
+                            elif isinstance(obj[key][dkey],dict):
+                                for tkey in obj[key][dkey]:
+                                    if isinstance(obj[key][dkey][tkey],ObjectId):
+                                        obj[key][dkey][tkey] = str(obj[key][dkey][tkey])
                 yield {"datastore":dsSpec, "source":{"fkey":fkey},"metadata":obj}
 
     return f(ds.getSpec())

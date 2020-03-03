@@ -84,6 +84,9 @@ class simpleCollection(metaCollection):
 
     def getMetadata(self,orid=None,query=None,iterate=True):
         return colMethods.collectionGetMetadata(self,orid,query,iterate)
+    
+    def getAnnotations(self,noteid=None,query=None,iterate=True):
+        return colMethods.collectionGetAnnotations(self,noteid,query,iterate)
 
     def getSignals(self,orid=None,query=None,readSr=None,iterate=True):
         return colMethods.collectionGetSignals(self,orid,query,readSr,iterate)
