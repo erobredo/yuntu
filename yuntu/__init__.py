@@ -12,3 +12,4 @@ __all__ = [
     'soundscape',
     'dataset'
 ]
+__version__ = "0.1"

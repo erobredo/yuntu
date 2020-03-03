@@ -1,5 +1,7 @@
 """Instalation script."""
 import os
+import yuntu
+
 from setuptools import find_packages, setup
 
 with open(os.path.join(os.path.dirname(__file__), 'README.md')) as readme:
@@ -10,7 +12,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name='yuntu',
-    version='0.0.1',
+    version=yuntu.__version__,
     packages=find_packages(exclude=['tests']),
     include_package_data=True,
     license='BSD License',
