@@ -1,4 +1,3 @@
-#dummy line to trigger build
 FROM tensorflow/tensorflow:2.3.0rc2-gpu-jupyter
 USER root
 ENV TIMEZONE America/Mexico_City
