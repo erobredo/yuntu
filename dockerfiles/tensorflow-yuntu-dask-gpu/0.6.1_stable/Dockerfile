@@ -28,8 +28,8 @@ RUN python3 -m pip install dask-cuda==0.20.0a210416
 # Install yuntu from git with deps
 RUN mkdir -p /extra_code
 RUN cd /extra_code
-ADD . /extra_code/yuntu
-RUN cd /extra_code/yuntu && \
+ADD . /extra_code/yuntu-private
+RUN cd /extra_code/yuntu-private/src && \
     python3 setup.py install
 
 RUN python3 -m pip install sidekit guano timezonefinder s3fs "tensorflow_probability<=0.11.1"    
