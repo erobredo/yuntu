@@ -11,11 +11,11 @@ ENV PIP_PACKAGES_KALE="kubeflow-kale==0.6.1"
 RUN apt-get update && export $DEBIAN_FRONTEND && \
     echo $TIMEZONE > /etc/timezone && apt-get install -y tzdata
 RUN apt-get update && apt-get install -y $DEB_BUILD_DEPS $DEB_PACKAGES && pip install --upgrade pip  
-RUN  curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add - && \
-     echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list && \
-     apt-get update && apt-get install -y yarn
+
 # Install nodejs deps
-RUN curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash - && apt-get install -y nodejs
+RUN curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - && apt-get install -y nodejs
+
+#Install jupyter
 RUN pip3 install jupyter "jupyterlab>=2.0.0,<3.0.0" --upgrade
 
 # Assign jupyter password
@@ -31,7 +31,14 @@ RUN cd /extra_code
 ADD . /extra_code/yuntu
 RUN cd /extra_code/yuntu && \
     python3 setup.py install
-    
+
+RUN python3 -m pip install sidekit guano timezonefinder s3fs "tensorflow_probability<=0.11.1"    
+#from statement installs 2.1.0, next line upgrade to specific version
+RUN pip3 install --upgrade tensorflow-gpu==2.3.0
+
+#kale installation
+RUN pip install $PIP_PACKAGES_KALE
+RUN jupyter labextension install kubeflow-kale-labextension@0.6.1
     
 VOLUME ["/shared_volume"]
 ENV NB_PREFIX audio_dgpi
