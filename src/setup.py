@@ -50,7 +50,7 @@ setup(
     packages=find_packages(exclude=['tests']),
     include_package_data=True,
     license='BSD License',
-    description='Acoustic Analysis tools for Conabio',
+    description='Acoustic Analysis tools for Conabio some words to check build and push of docker image',
     long_description=README,
     url='https://github.com/CONABIO-audio/yuntu',
     author=(
