@@ -121,17 +121,19 @@ class Audio(TimeMedia):
         if samplerate is None:
             samplerate = resolution
 
-        if samplerate is None and duration is None and array is not None:
-            raise ValueError("When creating audio from numpy arrays," +
-                             "either samplerate or duration must be specified.")
-
-        if samplerate is not None and duration is None and array is not None:
-            duration = len(array)/samplerate
-        if samplerate is None and duration is not None and array is not None:
-            samplerate = np.round(float(len(array))/duration).astype(int)
-
-        if ((samplerate is None) or (duration is None)) and media_info is None:
+        if ((samplerate is None) or (duration is None)) and media_info is None and self.path is not None:
             media_info = self.read_info()
+
+        if media_info is None and array is not None and self.path is None:
+            if samplerate is None and duration is None and array is not None:
+                raise ValueError("When creating audio from numpy arrays," +
+                                 "either samplerate or duration must be specified.")
+
+            if samplerate is not None and duration is None:
+                duration = len(array)/samplerate
+
+            if samplerate is None and duration is not None:
+                samplerate = np.round(float(len(array))/duration).astype(int)
 
         if media_info is not None and isinstance(media_info, dict):
             if not media_info_is_complete(media_info):
