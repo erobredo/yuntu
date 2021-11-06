@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+**/.ipynb_checkpoints/
+build/
+dist/
+*.egg-info/
+*.ipynb
+*.sqlite
+
+!tutorials/*.ipynb
