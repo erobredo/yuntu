@@ -7,7 +7,7 @@ ENV LC_ALL C.UTF-8
 ENV DEBIAN_FRONTEND noninteractive
 ENV DEB_BUILD_DEPS="sudo nano less git wget curl python3-dev python3-pip python3-setuptools iptables ffmpeg libsndfile1 libpq-dev libsndfile1-dev python3-soundfile python-soundfile gcc graphviz graphviz-dev"
 ENV DEB_PACKAGES="ca-certificates"
-ENV PIP_PACKAGES_COMMON="pytest"
+ENV PIP_PACKAGES_COMMON=""
 ENV PIP_PACKAGES_KALE="kubeflow-kale==0.6.1"
 RUN apt-get update && export $DEBIAN_FRONTEND && \
     echo $TIMEZONE > /etc/timezone && apt-get install -y tzdata
