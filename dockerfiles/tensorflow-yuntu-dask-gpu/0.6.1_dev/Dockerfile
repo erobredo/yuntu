@@ -37,7 +37,7 @@ RUN python3 -m pip install sidekit guano timezonefinder s3fs "tensorflow_probabi
 #from statement installs 2.1.0, next line upgrade to specific version
 RUN pip3 install --upgrade tensorflow-gpu==2.3.0
 
-RUN pip install $PIP_PACKAGES_COMMON
+#RUN pip install $PIP_PACKAGES_COMMON
 
 #kale installation
 RUN pip install $PIP_PACKAGES_KALE
