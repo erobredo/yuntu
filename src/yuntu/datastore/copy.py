@@ -2,7 +2,9 @@ import os
 from pony.orm import db_session
 from yuntu.datastore.base import Datastore
 from yuntu.core.audio.utils import media_copy
-from yuntu.core.database.base import TimedDatabaseManager
+from yuntu.core.database.timed import TimedDatabaseManager
+from yuntu.core.database.spatial import SpatialDatabaseManager
+from yuntu.core.database.spatiotemporal import SpatioTemporalDatabaseManager
 
 class CopyDatastore(Datastore):
     """A datastore that copies all files to a target_directory and inserts
@@ -51,6 +53,10 @@ class CopyDatastore(Datastore):
         col_type = "simple"
         if isinstance(self.collection.db_manager, TimedDatabaseManager):
             col_type = "timed"
+        elif isinstance(self.collection.db_manager, SpatialDatabaseManager):
+            col_type = "spatial"
+        elif isinstance(self.collection.db_manager, SpatioTemporalDatabaseManager):
+            col_type = "spatiotemporal"
 
         col_config = {
             "col_type": col_type,

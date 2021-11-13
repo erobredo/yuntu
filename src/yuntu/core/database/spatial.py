@@ -1,5 +1,9 @@
-'''Geo-spatial related methods.'''
+'''Geo-spatial database manager.'''
 from pony.orm import db_session
+from yuntu.core.database.recordings import build_spatial_recording_model
+from yuntu.core.database.base import DatabaseManager
+
+SPATIAL_CAPABLE_PROVIDERS = ["sqlite"]
 
 @db_session
 def create_sqlite_spatial_structure(db):
@@ -52,3 +56,36 @@ def build_query_with_geom(provider, wkt, method="intersects"):
         return build_query_sqlite_with_geom(wkt, method)
     else:
         raise NotImplementedError("Only sqlite databases support spatial query for now")
+
+
+
+class SpatialDatabaseManager(DatabaseManager):
+    def init_db(self):
+        """Initialize database.
+
+        Will bind with database and generate all tables.
+        """
+        if self.provider not in SPATIAL_CAPABLE_PROVIDERS:
+            prov = self.provider
+            raise NotImplementedError(f"Spatial indexing with provider {prov} not implemented")
+
+        self.db.bind(self.provider, **self.config)
+        self.db.generate_mapping(create_tables=True)
+        self.create_spatial_structure()
+
+    @db_session
+    def insert(self, meta_arr, model="recording"):
+        """Directly insert new media entries without a datastore."""
+        entities = super().insert(meta_arr, model)
+        self.db.commit()
+        return parse_geometry(self.db, entities, provider=self.provider)
+
+    def create_spatial_structure(self):
+        create_spatial_structure(self.db, self.provider)
+
+    def build_spatialized_recording_model(self, recording):
+        return build_spatial_recording_model(recording)
+
+    def build_recording_model(self):
+        recording = super().build_recording_model()
+        return self.build_spatialized_recording_model(recording)

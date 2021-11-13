@@ -4,9 +4,9 @@ import json
 import pandas as pd
 
 from yuntu.core.database.base import DatabaseManager
-from yuntu.core.database.base import TimedDatabaseManager
-from yuntu.core.database.base import SpatialDatabaseManager
-from yuntu.core.database.base import SpatioTemporalDatabaseManager
+from yuntu.core.database.timed import TimedDatabaseManager
+from yuntu.core.database.spatial import SpatialDatabaseManager
+from yuntu.core.database.spatiotemporal import SpatioTemporalDatabaseManager
 from yuntu.core.database.spatial import build_query_with_geom
 from yuntu.core.audio.audio import Audio
 from yuntu.core.annotation.annotation import Annotation
