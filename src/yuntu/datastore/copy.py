@@ -1,23 +1,36 @@
 import os
-import shutil
 from pony.orm import db_session
 from yuntu.datastore.base import Datastore
+from yuntu.core.audio.utils import media_copy
 from yuntu.core.database.base import TimedDatabaseManager
 
 class CopyDatastore(Datastore):
     """A datastore that copies all files to a target_directory and inserts
     metadata into a new collection"""
 
-    def __init__(self, *args, collection, query, target_path, keep_metadata=True,
+    def __init__(self, *args, collection, query, limit=None, offset=0,
+                 target_path, keep_metadata=True, absolute_path=False,
                  keep_id=True, tqdm=None, **kwargs):
+        self.limit = limit
+        self.offset = offset
         self.query = query
+        self.absolute_path = absolute_path
         self.target_path = target_path
         self.collection = collection
         self.media_path = None
         self.keep_metadata = keep_metadata
         self.keep_id = keep_id
         self.tqdm = tqdm
-        self.init_target()
+
+        if self.offset is not None:
+            if self.limit is None:
+                self.query_slice = slice(self.offset, None)
+            else:
+                self.query_slice = slice(self.offset, self.offset + self.limit)
+
+        if self.target_path is not None:
+            self.init_target()
+
         super().__init__(*args, **kwargs)
 
     def init_target(self):
@@ -29,7 +42,7 @@ class CopyDatastore(Datastore):
     @property
     def size(self):
         if self._size is None:
-            self._size = len(self.collection.recordings(query=self.query))
+            self._size = len(self.collection.recordings(query=self.query)[self.query_slice])
         return self._size
 
     def get_metadata(self):
@@ -51,11 +64,11 @@ class CopyDatastore(Datastore):
     def iter(self):
         if self.tqdm is not None:
             with self.tqdm(total=self.size) as pbar:
-                for recording in self.collection.recordings(query=self.query):
+                for recording in self.collection.recordings(query=self.query)[self.query_slice]:
                     pbar.update(1)
                     yield recording
         else:
-            for recording in self.collection.recordings(query=self.query):
+            for recording in self.collection.recordings(query=self.query)[self.query_slice]:
                 pbar.update(1)
                 yield recording
 
@@ -69,13 +82,22 @@ class CopyDatastore(Datastore):
         source_path = self.collection.get_abspath(datum.path)
         recid = datum.id
         target_path = os.path.join(self.media_path, f"{recid}_copy.wav")
-        shutil.copy(source_path, target_path)
-        return os.path.join("media", f"{recid}_copy.wav")
+        media_copy(source_path, target_path)
+
+        if not self.absolute_path:
+            return os.path.join("media", f"{recid}_copy.wav")
+
+        return os.path.abspath(target_path)
 
     def prepare_datum(self, datum):
-        copy_path = self.copy_data(datum)
         meta = datum.to_dict()
-        meta["path"] = copy_path
+        if self.target_path is not None:
+            path = self.copy_data(datum)
+        else:
+            path = meta["path"]
+
+        meta["path"] = path
+
         if not self.keep_metadata:
             meta["metadata"] = {}
         else:

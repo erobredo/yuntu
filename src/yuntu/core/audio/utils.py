@@ -7,6 +7,7 @@ import wave
 import numpy as np
 import librosa
 import soundfile
+import shutil
 
 SAMPWIDTHS = {
     'PCM_16': 2,
@@ -21,6 +22,20 @@ def media_open_s3(path):
     bucket = path.replace("s3://", "").split("/")[0]
     key = path.replace(f"s3://{bucket}/", "")
     return s3.open('{}/{}'.format(bucket, key))
+
+def media_copy_s3(source_path, target_path):
+    from s3fs.core import S3FileSystem
+    s3 = S3FileSystem()
+    if source_path[:5] == "s3://" and target_path[:5] == "s3://":
+        return s3.copy(source_path, target_path)
+    elif source_path[:5] == "s3://":
+        return s3.download(source_path, target_path)
+    return s3.upload(source_path, target_path)
+
+def media_copy(source_path, target_path):
+    if source_path[:5] == "s3://" or target_path[:5] == "s3://":
+        return media_copy_s3(source_path, target_path)
+    return shutil.copy(source_path, target_path)
 
 def media_open(path, mode='rb'):
     if path[:5] == "s3://":

@@ -16,6 +16,7 @@ from yuntu.core.audio.utils import read_info, hash_file
 
 class Datastore(ABC):
     _size = None
+    _metadata = None
 
     def __init__(self):
         self._metadata = None

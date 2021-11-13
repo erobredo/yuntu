@@ -5,6 +5,9 @@ import pandas as pd
 
 from yuntu.core.database.base import DatabaseManager
 from yuntu.core.database.base import TimedDatabaseManager
+from yuntu.core.database.base import SpatialDatabaseManager
+from yuntu.core.database.base import SpatioTemporalDatabaseManager
+from yuntu.core.database.spatial import build_query_with_geom
 from yuntu.core.audio.audio import Audio
 from yuntu.core.annotation.annotation import Annotation
 from yuntu.datastore.copy import CopyDatastore
@@ -79,12 +82,13 @@ class Collection:
             limit=None,
             offset=0,
             with_metadata=False,
-            with_annotations=False):
+            with_annotations=False,
+            **kwargs):
         if limit is None:
             query_slice = slice(offset, None)
         else:
             query_slice = slice(offset, offset + limit)
-        recordings = self.recordings(query=query)[query_slice]
+        recordings = self.recordings(query=query, **kwargs)[query_slice]
 
         records = []
         for recording in recordings:
@@ -252,3 +256,25 @@ class Collection:
 class TimedCollection(Collection):
     """Time aware collection."""
     db_manager_class = TimedDatabaseManager
+
+class SpatialCollection(Collection):
+    """Geographic aware collection."""
+    db_manager_class = SpatialDatabaseManager
+
+    def recordings(self, query=None, wkt=None, method='intersects', iterate=True):
+        """Retrieve audio objects."""
+        if wkt is not None:
+            geom_query = build_query_with_geom(provider=self.db_manager.provider, wkt=wkt, method=method)
+            matches = self.db_manager.select(geom_query, model="recording")
+            if query is not None:
+                matches = matches.filter(query)
+        else:
+            matches = self.db_manager.select(query, model="recording")
+
+        if iterate:
+            return matches
+        return list(matches)
+
+class SpatioTemporalCollection(SpatialCollection):
+    """Geographic aware collection."""
+    db_manager_class = SpatioTemporalDatabaseManager

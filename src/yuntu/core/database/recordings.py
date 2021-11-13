@@ -49,10 +49,30 @@ def build_base_recording_model(db):
 
 def build_timed_recording_model(Recording):
     class TimedRecording(Recording):
-        """Datastore that builds data from a foreign database."""
+        """Timed recording model."""
         time_raw = Required(str)
         time_format = Required(str)
         time_zone = Required(str)
         time_utc = Required(datetime, precision=6)
 
     return TimedRecording
+
+def build_spatial_recording_model(Recording):
+    class SpatialRecording(Recording):
+        """Spatial recording model."""
+        latitude = Required(float)
+        longitude = Required(float)
+
+    return SpatialRecording
+
+def build_spatio_temporal_recording_model(Recording):
+    class SpatioTemporalRecording(Recording):
+        """Spatial and temporal referenced recording model."""
+        time_raw = Required(str)
+        time_format = Required(str)
+        time_zone = Required(str)
+        time_utc = Required(datetime, precision=6)
+        latitude = Required(float)
+        longitude = Required(float)
+
+    return SpatioTemporalRecording

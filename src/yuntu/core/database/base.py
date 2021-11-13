@@ -2,15 +2,20 @@
 from collections import namedtuple
 from pony.orm import Database
 from pony.orm import db_session
+from pony.orm import raw_sql
 
 from yuntu.core.database.annotations import build_base_annotation_model
 from yuntu.core.database.annotations import build_timed_annotation_model
 from yuntu.core.database.recordings import build_base_recording_model
 from yuntu.core.database.recordings import build_timed_recording_model
+from yuntu.core.database.recordings import build_spatial_recording_model
+from yuntu.core.database.recordings import build_spatio_temporal_recording_model
 from yuntu.core.database.datastores import build_base_datastore_model
 from yuntu.core.database.datastores import build_foreign_db_datastore_model
 from yuntu.core.database.datastores import build_storage_model
 from yuntu.core.database.datastores import build_remote_storage_model
+from yuntu.core.database.spatial import create_spatial_structure
+from yuntu.core.database.spatial import parse_geometry
 
 MODELS = [
     'recording',
@@ -20,6 +25,9 @@ MODELS = [
     'storage',
     'remote_storage'
 ]
+
+SPATIAL_CAPABLE_PROVIDERS = ["sqlite"]
+
 Models = namedtuple('Models', MODELS)
 
 
@@ -128,10 +136,49 @@ class DatabaseManager:
 
 
 class TimedDatabaseManager(DatabaseManager):
-
     def build_recording_model(self):
         recording = super().build_recording_model()
         return build_timed_recording_model(recording)
+
+    def build_annotation_model(self):
+        annotation = super().build_annotation_model()
+        return build_timed_annotation_model(annotation)
+
+class SpatialDatabaseManager(DatabaseManager):
+    def init_db(self):
+        """Initialize database.
+
+        Will bind with database and generate all tables.
+        """
+        if self.provider not in SPATIAL_CAPABLE_PROVIDERS:
+            prov = self.provider
+            raise NotImplementedError(f"Spatial indexing with provider {prov} not implemented")
+
+        self.db.bind(self.provider, **self.config)
+        self.db.generate_mapping(create_tables=True)
+        self.create_spatial_structure()
+
+    @db_session
+    def insert(self, meta_arr, model="recording"):
+        """Directly insert new media entries without a datastore."""
+        entities = super().insert(meta_arr, model)
+        self.db.commit()
+        return parse_geometry(self.db, entities, provider=self.provider)
+
+    def create_spatial_structure(self):
+        create_spatial_structure(self.db, self.provider)
+
+    def build_spatialized_recording_model(self, recording):
+        return build_spatial_recording_model(recording)
+
+    def build_recording_model(self):
+        recording = super().build_recording_model()
+        return self.build_spatialized_recording_model(recording)
+
+class SpatioTemporalDatabaseManager(SpatialDatabaseManager):
+
+    def build_spatialized_recording_model(self, recording):
+        return build_spatio_temporal_recording_model(recording)
 
     def build_annotation_model(self):
         annotation = super().build_annotation_model()
