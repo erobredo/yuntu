@@ -1,7 +1,7 @@
 import os
 import json
 from yuntu.core.audio.utils import media_open
-from yuntu.collection.base import Collection, TimedCollection
+from yuntu.collection.base import Collection, TimedCollection, SpatialCollection, SpatioTemporalCollection
 from yuntu.collection.irekua import IrekuaRESTCollection
 
 def collection(col_type="simple", materialized=None, **kwargs):
@@ -11,6 +11,10 @@ def collection(col_type="simple", materialized=None, **kwargs):
         return Collection(**kwargs)
     elif col_type == "timed":
         return TimedCollection(**kwargs)
+    elif col_type == "spatial":
+        return SpatialCollection(**kwargs)
+    elif col_type == "spatiotemporal":
+        return SpatioTemporalCollection(**kwargs)
     elif col_type == "irekua":
         return IrekuaRESTCollection(**kwargs)
     raise NotImplementedError(f"Collection type {col_type} unknown")
