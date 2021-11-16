@@ -75,21 +75,29 @@ class Datastore(ABC):
 
         recording_inserts = 0
         annotation_inserts = 0
+        recording_parse_errors = 0
+        annotation_parse_errors = 0
         for datum in self.iter():
             meta = self.prepare_datum(datum)
-            meta['path'] = self.get_abspath(meta['path'])
-            meta['datastore'] = datastore_record
-            recording = collection.insert(meta)[0]
+            if meta is not None:
+                meta['path'] = self.get_abspath(meta['path'])
+                meta['datastore'] = datastore_record
+                recording = collection.insert(meta)[0]
 
-            for annotation in self.iter_annotations(datum):
-                annotation_meta = self.prepare_annotation(datum, annotation)
-                annotation_meta['recording'] = recording
-                collection.annotate([annotation_meta])
-                annotation_inserts += 1
+                for annotation in self.iter_annotations(datum):
+                    annotation_meta = self.prepare_annotation(datum, annotation)
+                    if annotation_meta is not None:
+                        annotation_meta['recording'] = recording
+                        collection.annotate([annotation_meta])
+                        annotation_inserts += 1
+                    else:
+                        annotation_parse_errors += 1
 
-            recording_inserts += 1
+                recording_inserts += 1
+            else:
+                recording_parse_errors += 1
 
-        return datastore_id, recording_inserts, annotation_inserts
+        return datastore_id, recording_inserts, annotation_inserts, recording_parse_errors, annotation_parse_errors
 
     def get_recording_dataframe(self, with_annotations=False):
         data = []
@@ -127,6 +135,24 @@ class DataBaseDatastore(Datastore, ABC):
 
         self.mapping = mapping
         self.tqdm = tqdm
+
+    @staticmethod
+    def insert_into_dict(d, keys, value):
+        current_dict = d
+        for key in keys[:-1]:
+            if not key in current_dict:
+                current_dict[key] = {}
+            current_dict = current_dict[key]
+        current_dict[keys[-1]] = value
+
+    def map_data(self, datum, data=None):
+        if data is None:
+            data = {}
+        for column in self.mapping:
+            value = datum[column]
+            keys = self.mapping[column].split('.')
+            self.insert_into_dict(data, keys, value)
+        return data
 
     def get_metadata(self):
         meta = {"type": "DataBaseDatastore"}

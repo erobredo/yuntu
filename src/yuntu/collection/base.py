@@ -2,6 +2,7 @@
 import os
 import json
 import pandas as pd
+import shapely.wkt
 
 from yuntu.core.database.base import DatabaseManager
 from yuntu.core.database.timed import TimedDatabaseManager
@@ -274,6 +275,46 @@ class SpatialCollection(Collection):
         if iterate:
             return matches
         return list(matches)
+
+    def get_recording_dataframe(
+            self,
+            query=None,
+            limit=None,
+            offset=0,
+            with_metadata=False,
+            with_annotations=False,
+            with_geometry=False,
+            **kwargs):
+        if limit is None:
+            query_slice = slice(offset, None)
+        else:
+            query_slice = slice(offset, offset + limit)
+        recordings = self.recordings(query=query, **kwargs)[query_slice]
+
+        records = []
+        for recording in recordings:
+            data = recording.to_dict()
+            media_info = data.pop('media_info')
+            data.update(media_info)
+            data["path"] = self.get_abspath(data["path"])
+
+            if not with_metadata:
+                data.pop('metadata')
+
+            if not with_geometry:
+                data.pop('geometry')
+            else:
+                data["geometry"] = shapely.wkt.loads(data["geometry"])
+
+            if with_annotations:
+                data['annotations'] = [
+                    _parse_annotation(annotation)
+                    for annotation in recording.annotations]
+
+            records.append(data)
+
+        return pd.DataFrame(records)
+
 
 class SpatioTemporalCollection(SpatialCollection):
     """Geographic aware collection."""

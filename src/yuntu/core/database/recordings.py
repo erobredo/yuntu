@@ -62,6 +62,7 @@ def build_spatial_recording_model(Recording):
         """Spatial recording model."""
         latitude = Required(float)
         longitude = Required(float)
+        geometry = Required(str)
 
     return SpatialRecording
 
@@ -74,5 +75,6 @@ def build_spatio_temporal_recording_model(Recording):
         time_utc = Required(datetime, precision=6)
         latitude = Required(float)
         longitude = Required(float)
+        geometry = Required(str)
 
     return SpatioTemporalRecording

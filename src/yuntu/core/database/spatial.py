@@ -1,5 +1,6 @@
 '''Geo-spatial database manager.'''
 from pony.orm import db_session
+from shapely.geometry import Point
 from yuntu.core.database.recordings import build_spatial_recording_model
 from yuntu.core.database.base import DatabaseManager
 
@@ -13,6 +14,15 @@ def create_sqlite_spatial_structure(db):
     db.execute('''SELECT InitSpatialMetaData()''')
     db.execute('''SELECT AddGeometryColumn('recording','geom' , 4326, 'POINT', 2)''')
     db.execute('''SELECT CreateSpatialIndex('recording', 'geom');''')
+    db.commit()
+
+@db_session
+def create_postgresql_spatial_structure(db):
+    con = db.get_connection()
+    con.enable_load_extension(True)
+    db.execute('''CREATE EXTENSION postgis;''')
+    db.execute('''SELECT AddGeometryColumn('public', 'recording','geom' , 4326, 'POINT', 2);''')
+    db.execute('''CREATE INDEX recording_geom_idx ON recording USING GIST(geom);''')
     db.commit()
 
 @db_session
@@ -76,8 +86,11 @@ class SpatialDatabaseManager(DatabaseManager):
     @db_session
     def insert(self, meta_arr, model="recording"):
         """Directly insert new media entries without a datastore."""
+        for n, meta in enumerate(meta_arr):
+            meta_arr[n]["geometry"] = Point(meta["longitude"], meta["latitude"]).wkt
         entities = super().insert(meta_arr, model)
         self.db.commit()
+
         return parse_geometry(self.db, entities, provider=self.provider)
 
     def create_spatial_structure(self):

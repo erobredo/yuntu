@@ -7,6 +7,7 @@ __all__ = [
     'audiomoth',
     'irekua',
     'postgresql',
+    'mongodb',
     'copy',
     'base'
 ]
