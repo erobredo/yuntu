@@ -41,7 +41,6 @@ def build_base_recording_model(db):
 
             if self.spectrum == ULTRASONIC_SPECTRUM:
                 if samplerate <= ULTRASONIC_SAMPLERATE_THRESHOLD:
-                    print(samplerate)
                     raise ValueError("Not an ultrasonic recording.")
 
     return Recording
