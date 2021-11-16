@@ -2,6 +2,8 @@
 from . import base
 from . import audiomoth
 from . import irekua
+from . import postgresql
+from . import mongodb
 
 __all__ = [
     'audiomoth',

@@ -40,15 +40,6 @@ class PostgresqlDatastore(DataBaseDatastore, ABC):
         meta["type"] = "PostgresqlDatastore"
         return meta
 
-    @staticmethod
-    def insert_into_dict(d, keys, value):
-        current_dict = d
-        for key in keys[:-1]:
-            if not key in current_dict:
-                current_dict[key] = {}
-            current_dict = current_dict[key]
-        current_dict[keys[-1]] = value
-
     @property
     def size(self):
         if self._size is None:
