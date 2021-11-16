@@ -103,15 +103,17 @@ class Datastore(ABC):
         data = []
         for datum in self.iter():
             rec_meta = self.prepare_datum(datum)
-            media_info = rec_meta.pop('media_info')
-            rec_meta.update(media_info)
+            if rec_meta is not None:
+                media_info = rec_meta.pop('media_info')
+                rec_meta.update(media_info)
 
-            if with_annotations:
-                annotations = [self.prepare_annotation(datum, annotation)
-                               for annotation in self.iter_annotations(datum)]
-                rec_meta["annotations"] = annotations
+                if with_annotations:
+                    annotations = [self.prepare_annotation(datum, annotation)
+                                   for annotation in self.iter_annotations(datum)]
+                    annotations = [x for x in annotations if x is not None]
+                    rec_meta["annotations"] = annotations
 
-            data.append(rec_meta)
+                data.append(rec_meta)
 
         return pd.DataFrame(data)
 
@@ -119,7 +121,9 @@ class Datastore(ABC):
         data = []
         for datum in self.iter():
             for annotation in self.iter_annotations(datum):
-                data.append(self.prepare_annotation(datum, annotation))
+                pann = self.prepare_annotation(datum, annotation)
+                if pann is not None:
+                    data.append(pann)
         return pd.DataFrame(data)
 
 
