@@ -153,9 +153,10 @@ class DataBaseDatastore(Datastore, ABC):
         if data is None:
             data = {}
         for column in self.mapping:
-            value = datum[column]
-            keys = self.mapping[column].split('.')
-            self.insert_into_dict(data, keys, value)
+            if column in datum:
+                value = datum[column]
+                keys = self.mapping[column].split('.')
+                self.insert_into_dict(data, keys, value)
         return data
 
     def get_metadata(self):
