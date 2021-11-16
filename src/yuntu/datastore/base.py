@@ -75,14 +75,18 @@ class Datastore(ABC):
 
         recording_inserts = 0
         annotation_inserts = 0
-        recording_parse_errors = 0
-        annotation_parse_errors = 0
+        recording_insert_errors = 0
+        annotation_insert_errors = 0
         for datum in self.iter():
             meta = self.prepare_datum(datum)
             if meta is not None:
                 meta['path'] = self.get_abspath(meta['path'])
                 meta['datastore'] = datastore_record
-                recording = collection.insert(meta)[0]
+                try:
+                    recording = collection.insert(meta)[0]
+                except:
+                    recording_insert_errors += 1
+                    continue
 
                 for annotation in self.iter_annotations(datum):
                     annotation_meta = self.prepare_annotation(datum, annotation)
@@ -91,13 +95,13 @@ class Datastore(ABC):
                         collection.annotate([annotation_meta])
                         annotation_inserts += 1
                     else:
-                        annotation_parse_errors += 1
+                        annotation_insert_errors += 1
 
                 recording_inserts += 1
             else:
-                recording_parse_errors += 1
+                recording_insert_errors += 1
 
-        return datastore_id, recording_inserts, annotation_inserts, recording_parse_errors, annotation_parse_errors
+        return datastore_id, recording_inserts, annotation_inserts, recording_insert_errors, annotation_insert_errors
 
     def get_recording_dataframe(self, with_annotations=False):
         data = []
