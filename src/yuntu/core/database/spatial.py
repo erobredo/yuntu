@@ -86,12 +86,14 @@ class SpatialDatabaseManager(DatabaseManager):
     @db_session
     def insert(self, meta_arr, model="recording"):
         """Directly insert new media entries without a datastore."""
-        for n, meta in enumerate(meta_arr):
-            meta_arr[n]["geometry"] = Point(meta["longitude"], meta["latitude"]).wkt
-        entities = super().insert(meta_arr, model)
-        self.db.commit()
+        if model == "recording":
+            for n, meta in enumerate(meta_arr):
+                meta_arr[n]["geometry"] = Point(meta["longitude"], meta["latitude"]).wkt
+            entities = super().insert(meta_arr, model)
+            self.db.commit()
 
-        return parse_geometry(self.db, entities, provider=self.provider)
+            return parse_geometry(self.db, entities, provider=self.provider)
+        return super().insert(meta_arr, model)
 
     def create_spatial_structure(self):
         create_spatial_structure(self.db, self.provider)
