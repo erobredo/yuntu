@@ -71,7 +71,7 @@ def build_spatio_temporal_recording_model(Recording):
         time_raw = Required(str)
         time_format = Required(str)
         time_zone = Required(str)
-        time_utc = Required(datetime, precision=6)
+        time_utc = Required(datetime, precision=6, sql_type='TIMESTAMP WITH TIME ZONE')
         latitude = Required(float)
         longitude = Required(float)
         geometry = Required(str)
