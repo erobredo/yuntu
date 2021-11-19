@@ -61,3 +61,17 @@ def pg_create_db(config, admin_user="postgres", admin_password="postgres",
     ).format(sql.Identifier(database)), [AsIs(username)])
 
     conn.close()
+
+def pg_create_spatial_structure(config, admin_user="postgres", admin_password="postgres"):
+    database = config["database"]
+    host = config["host"]
+    port = config["port"]
+    conn = connect(dbname=database, user=admin_user, password=admin_password,
+                   host=host, port=port)
+    conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+    cursor = conn.cursor()
+    cursor.execute('''CREATE EXTENSION postgis''')
+    cursor.execute('''SELECT AddGeometryColumn('public','recording','geom' , 4326, 'POINT', 2)''')
+    cursor.execute('''CREATE INDEX recording_geom_idx ON recording USING GIST(geom);''')
+    print(f"Spatial structure for '{database}' created!")
+    conn.close()
