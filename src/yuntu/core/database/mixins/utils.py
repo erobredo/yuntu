@@ -71,7 +71,5 @@ def pg_create_postgis_extension(config, admin_user="postgres", admin_password="p
     conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
     cursor = conn.cursor()
     cursor.execute('''CREATE EXTENSION postgis''')
-    cursor.execute('''SELECT AddGeometryColumn('public','recording','geom' , 4326, 'POINT', 2)''')
-    cursor.execute('''CREATE INDEX recording_geom_idx ON recording USING GIST(geom);''')
-    print(f"Spatial structure for '{database}' created!")
+    print(f"Created postgis extension for database '{database}'!")
     conn.close()
