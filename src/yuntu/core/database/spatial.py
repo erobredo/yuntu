@@ -1,6 +1,7 @@
 '''Geo-spatial database manager.'''
 from pony.orm import db_session
 from pony.orm.dbapiprovider import ProgrammingError
+from psycopg2.errors import DuplicateColumn
 from shapely.geometry import Point
 from yuntu.core.database.recordings import build_spatial_recording_model
 from yuntu.core.database.base import DatabaseManager
@@ -24,10 +25,11 @@ def create_postgres_spatial_structure(db):
         db.execute('''SELECT AddGeometryColumn('public','recording','geom' , 4326, 'POINT', 2);''')
         db.execute('''CREATE INDEX recording_geom_idx ON recording USING GIST(geom);''')
         db.commit()
+    except DuplicateColumn as e:
+        print("Geometry column already exists, continue...")
     except ProgrammingError as e:
         print(e)
         raise ValueError("Postgis extension should be installed as superuser independently in order to create a spatial structure in postgres.")
-
 @db_session
 def parse_postgres_geometry(db, entities):
     ids = tuple([ent.id for ent in entities])
