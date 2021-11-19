@@ -84,7 +84,8 @@ class Datastore(ABC):
                 meta['datastore'] = datastore_record
                 try:
                     recording = collection.insert(meta)[0]
-                except:
+                except CacheIndexError as e:
+                    print(e)
                     recording_insert_errors += 1
                     continue
 
