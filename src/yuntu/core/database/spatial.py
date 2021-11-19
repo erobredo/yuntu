@@ -27,6 +27,14 @@ def create_postgres_spatial_structure(db):
         db.commit()
     except DuplicateColumn as e:
         print("Geometry column already exists, continue...")
+    except ProgrammingError as e:
+        except_str = str(e)
+        if 'column "geom" of relation "recording" already exists' in except_str:
+            print("Geometry column already exists, continue...")
+        else:
+            print(e)
+            raise ValueError("Postgis extension should be installed as superuser independently in order to create a spatial structure in postgres.")
+
 @db_session
 def parse_postgres_geometry(db, entities):
     ids = tuple([ent.id for ent in entities])
