@@ -17,6 +17,12 @@ def create_sqlite_spatial_structure(db):
     db.commit()
 
 @db_session
+def create_postgres_spatial_structure(db):
+    db.execute('''SELECT AddGeometryColumn('public','recording','geom' , 4326, 'POINT', 2);''')
+    db.execute('''CREATE INDEX recording_geom_idx ON recording USING GIST(geom);''')
+    db.commit()
+
+@db_session
 def parse_postgres_geometry(db, entities):
     ids = tuple([ent.id for ent in entities])
     if len(ids) > 1:
@@ -68,7 +74,7 @@ def create_spatial_structure(db, provider):
     if provider == "sqlite":
         create_sqlite_spatial_structure(db)
     elif provider == "postgres":
-        raise print("Postgis extension should be installed as superuser independently, continue...")
+        create_postgres_spatial_structure(db)
     else:
         raise NotImplementedError("Only sqlite and postgres databases support spatial indexing for now")
 

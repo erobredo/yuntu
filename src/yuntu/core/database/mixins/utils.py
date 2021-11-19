@@ -62,7 +62,7 @@ def pg_create_db(config, admin_user="postgres", admin_password="postgres",
 
     conn.close()
 
-def pg_create_spatial_structure(config, admin_user="postgres", admin_password="postgres"):
+def pg_create_postgis_extension(config, admin_user="postgres", admin_password="postgres"):
     database = config["database"]
     host = config["host"]
     port = config["port"]
