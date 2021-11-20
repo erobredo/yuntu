@@ -13,6 +13,8 @@ class ProbeAnnotate(Pipeline):
                  probe_config,
                  collection_config,
                  query=None,
+                 limit=None,
+                 offset=0,
                  **kwargs):
 
         if not isinstance(collection_config, dict):
@@ -25,6 +27,8 @@ class ProbeAnnotate(Pipeline):
         self.query = query
         self.collection_config = collection_config
         self.probe_config = probe_config
+        self.limit = limit
+        self.offset = offset
         self.build()
 
     def build(self):
@@ -32,9 +36,13 @@ class ProbeAnnotate(Pipeline):
         self["query"] = place(self.query, 'dynamic', 'query')
         self["npartitions"] = place(1, 'scalar', 'npartitions')
         self["probe_config"] = place(self.probe_config, 'dict', 'probe_config')
+        self["limit"] = place(self.limit, 'scalar', 'limit')
+        self["offset"] = place(self.offset, 'scalar', 'offset')
         self["partitions"] = get_partitions(self["col_config"],
                                             self["query"],
-                                            self["npartitions"])
+                                            self["npartitions"],
+                                            self["limit"],
+                                            self["offset"])
         self["annotation_result"] = probe_annotate(self["partitions"],
                                                    self["probe_config"],
                                                    self["col_config"])

@@ -21,11 +21,11 @@ from yuntu.soundscape.hashers.base import Hasher
 from yuntu.soundscape.utils import absolute_timing
 
 
-def get_fragment_size(col_config, query):
+def get_fragment_size(col_config, query, limit=None, offset=0):
     col = collection(**col_config)
 
     with db_session:
-        fragment_length = col.recordings(query=query).count()
+        fragment_length = col.recordings(query=query, limit=limit, offset=offset).count()
 
     col.db_manager.db.disconnect()
     return fragment_length
@@ -132,9 +132,9 @@ def source_partition(datastore_config, rest_auth, npartitions=1):
 
 
 @transition(name="get_partitions", outputs=["partitions"],
-            signature=((DictPlace, DynamicPlace, ScalarPlace), (DynamicPlace,)))
-def get_partitions(col_config, query, npartitions=1):
-    length = get_fragment_size(col_config, query)
+            signature=((DictPlace, DynamicPlace, ScalarPlace, ScalarPlace, ScalarPlace), (DynamicPlace,)))
+def get_partitions(col_config, query, npartitions=1, limit=None, offset=0):
+    length = get_fragment_size(col_config, query, limit, offset)
     if length == 0:
         raise ValueError("Collection has no data. Populate collection first.")
 
@@ -142,16 +142,17 @@ def get_partitions(col_config, query, npartitions=1):
     psize = min(length, max(psize, 1))
 
     partitions = []
-    for ind in range(0, length, psize):
-        offset = ind
-        limit = min(psize, length - offset)
+    offset_length = offset+length
+    for ind in range(offset, offset_length, psize):
+        ioffset = ind
+        ilimit = min(psize, offset_length - ioffset)
 
         stop = False
-        if length - (offset + limit) < 30:
-            limit = length - offset
+        if offset_length - (ioffset + ilimit) < 30:
+            ilimit = offset_length - ioffset
             stop = True
 
-        partitions.append({"query": query, "limit": limit, "offset": offset})
+        partitions.append({"query": query, "limit": ilimit, "offset": ioffset})
 
         if stop:
             break
