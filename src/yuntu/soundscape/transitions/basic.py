@@ -23,9 +23,13 @@ from yuntu.soundscape.utils import absolute_timing
 
 def get_fragment_size(col_config, query, limit=None, offset=0):
     col = collection(**col_config)
+    if limit is None:
+        query_slice = slice(offset, None)
+    else:
+        query_slice = slice(offset, offset + limit)
 
     with db_session:
-        fragment_length = col.recordings(query=query, limit=limit, offset=offset).count()
+        fragment_length = col.recordings(query=query)[query_slice].count()
 
     col.db_manager.db.disconnect()
     return fragment_length
