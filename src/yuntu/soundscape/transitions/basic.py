@@ -134,7 +134,7 @@ def source_partition(datastore_config, rest_auth, npartitions=1):
 @transition(name="get_partitions", outputs=["partitions"],
             signature=((DictPlace, DynamicPlace, ScalarPlace, ScalarPlace, ScalarPlace), (DynamicPlace,)))
 def get_partitions(col_config, query, npartitions=1, limit=None, offset=0):
-    length = get_fragment_size(col_config, query, limit, offset)
+    length = get_fragment_size(col_config, query, limit=limit, offset=offset)
     if length == 0:
         raise ValueError("Collection has no data. Populate collection first.")
 
