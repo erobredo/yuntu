@@ -89,7 +89,7 @@ class Collection:
             query_slice = slice(offset, None)
         else:
             query_slice = slice(offset, offset + limit)
-        recordings = self.recordings(query=query, **kwargs)[query_slice]
+        recordings = self.recordings(query=query, **kwargs).order_by(lambda r: r.id)[query_slice]
 
         records = []
         for recording in recordings:
@@ -120,7 +120,7 @@ class Collection:
             query_slice = slice(offset, None)
         else:
             query_slice = slice(offset, offset + limit)
-        annotations = self.annotations(query=query)[query_slice]
+        annotations = self.annotations(query=query).order_by(lambda a: a.id)[query_slice]
 
         records = []
         for annotation in annotations:

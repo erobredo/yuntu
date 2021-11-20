@@ -29,7 +29,7 @@ def get_fragment_size(col_config, query, limit=None, offset=0):
         query_slice = slice(offset, offset + limit)
 
     with db_session:
-        fragment_length = len(col.recordings(query=query)[query_slice])
+        fragment_length = len(col.recordings(query=query).order_by(lambda r: r.id)[query_slice])
 
     col.db_manager.db.disconnect()
     return fragment_length
