@@ -10,7 +10,7 @@ import os
 import glob
 import pickle
 import pandas as pd
-from pony.orm import db_session
+from pony.orm import db_session, CacheIndexError
 from yuntu.core.audio.utils import read_info, hash_file
 
 
