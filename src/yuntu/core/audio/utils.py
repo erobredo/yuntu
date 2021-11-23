@@ -27,7 +27,7 @@ def s3_walk(path):
     '''Walk s3 path'''
     from s3fs.core import S3FileSystem
     s3 = S3FileSystem()
-    return [os.path.join("s3://", x) for x in s3.walk(path)]
+    return [(os.path.join("s3://", x[0]),x[1],x[2]) for x in s3.walk(path)]
 
 def ag_glob(path):
     '''Agnostic glob'''
