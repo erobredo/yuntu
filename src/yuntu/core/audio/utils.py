@@ -1,6 +1,7 @@
 """Auxiliar utilities for Audio classes and methods."""
 from typing import Optional
 import os
+import glob
 import io
 import hashlib
 import wave
