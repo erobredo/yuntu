@@ -21,13 +21,24 @@ def s3_glob(path):
     '''Glob using s3fs'''
     from s3fs.core import S3FileSystem
     s3 = S3FileSystem()
-    return s3.glob(path)
+    return [os.path.join("s3://", x) for x in s3.glob(path)]
+
+def s3_walk(path):
+    '''Walk s3 path'''
+    from s3fs.core import S3FileSystem
+    s3 = S3FileSystem()
+    return [os.path.join("s3://", x) for x in s3.walk(path)]
 
 def ag_glob(path):
     '''Agnostic glob'''
     if path[:5] == "s3://":
         return s3_glob(path)
     return glob.glob(path)
+
+def ag_walk(path):
+    if path[:5] == "s3://":
+        return s3_walk(path)
+    return os.walk(path)
 
 def media_open_s3(path):
     from s3fs.core import S3FileSystem
