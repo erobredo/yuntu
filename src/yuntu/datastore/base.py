@@ -17,9 +17,9 @@ class Datastore(ABC):
     _size = None
     _metadata = None
 
-    def __init__(self):
+    def __init__(self, base_dir='.'):
         self._metadata = None
-        self.base_dir = '.'
+        self.base_dir = base_dir
 
     def get_abspath(self, path):
         if self.base_dir is None:
@@ -174,8 +174,8 @@ class DataBaseDatastore(Datastore, ABC):
 
 class Storage(Datastore):
 
-    def __init__(self, dir_path, tqdm=None):
-        super().__init__()
+    def __init__(self, dir_path, base_dir=None, tqdm=None):
+        super().__init__(base_dir=base_dir)
         self.dir_path = dir_path
         self.tqdm = tqdm
 
