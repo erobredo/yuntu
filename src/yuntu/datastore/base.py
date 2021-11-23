@@ -7,11 +7,10 @@ collection.
 from abc import ABC
 from abc import abstractmethod
 import os
-import glob
 import pickle
 import pandas as pd
 from pony.orm import db_session, CacheIndexError
-from yuntu.core.audio.utils import read_info, hash_file
+from yuntu.core.audio.utils import read_info, hash_file, ag_glob
 
 
 class Datastore(ABC):
@@ -187,11 +186,11 @@ class Storage(Datastore):
 
     def iter(self):
         if self.tqdm is not None:
-            for fname in self.tqdm(glob.glob(os.path.join(self.dir_path,
-                                                          '*.WAV'))):
+            for fname in self.tqdm(ag_glob(os.path.join(self.dir_path,
+                                                        '*.WAV'))):
                 yield fname
         else:
-            for fname in glob.glob(os.path.join(self.dir_path, '*.WAV')):
+            for fname in ag_glob(os.path.join(self.dir_path, '*.WAV')):
                 yield fname
 
     def prepare_datum(self, datum):
@@ -212,7 +211,7 @@ class Storage(Datastore):
     @property
     def size(self):
         if self._size is None:
-            self._size = len(glob.glob(os.path.join(self.dir_path, '*.WAV')))
+            self._size = len(ag_glob(os.path.join(self.dir_path, '*.WAV')))
         return self._size
 
     def create_datastore_record(self, collection):

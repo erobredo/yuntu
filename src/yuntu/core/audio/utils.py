@@ -16,6 +16,18 @@ SAMPWIDTHS = {
     'FLOAT': 4
 }
 
+def s3_glob(path):
+    '''Glob using s3fs'''
+    from s3fs.core import S3FileSystem
+    s3 = S3FileSystem()
+    return s3.glob(path)
+
+def ag_glob(path):
+    '''Agnostic glob'''
+    if path[:5] == "s3://":
+        return s3_glob(path)
+    return glob.glob(path)
+
 def media_open_s3(path):
     from s3fs.core import S3FileSystem
     s3 = S3FileSystem()

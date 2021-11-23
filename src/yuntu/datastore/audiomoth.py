@@ -1,5 +1,4 @@
 """Prebuilt t datastores for common cases."""
-import glob
 import os
 from collections import OrderedDict
 import struct
@@ -7,7 +6,7 @@ import re
 from datetime import datetime
 
 from yuntu.datastore.base import Storage
-from yuntu.core.audio.utils import hash_file
+from yuntu.core.audio.utils import hash_file, media_open, ag_glob
 
 RIFF_ID_LENGTH = 4
 LENGTH_OF_COMMENT = 128
@@ -92,7 +91,7 @@ wavHeader_t = CustomStruct([
 
 
 def read_am_header(path):
-    with open(path, 'rb') as buffer:
+    with media_open(path, 'rb') as buffer:
         data = wavHeader_t.unpack(buffer.read(wavHeader_t.size))
 
     return data
@@ -158,10 +157,12 @@ def get_am_gain(comment):
 
 
 battery_regex = re.compile(r'battery state was (\d.\dV)')
-
+battery_regex_alt = re.compile(r'battery state was greater than (\d.\d)')
 
 def get_am_battery_state(comment):
     match = battery_regex.search(comment)
+    if match is None:
+        match = battery_regex_alt.search(comment)
     return match.group(1)
 
 
@@ -173,7 +174,7 @@ class AudioMothStorage(Storage):
 
     def get_metadata(self):
         meta = {"type": "AudioMothStorage"}
-        for fname in glob.glob(os.path.join(self.dir_path, '*.WAV')):
+        for fname in ag_glob(os.path.join(self.dir_path, '*.WAV')):
             header = read_am_header(fname)
             comment = header['icmt']['comment'].decode('utf-8').rstrip('\x00')
             am_id = get_am_id(comment)
