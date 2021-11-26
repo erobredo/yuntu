@@ -82,10 +82,6 @@ def add_hash(dataframe, hasher_config, out_name="xhash"):
     result = dataframe.apply(hasher, out_name=out_name, meta=meta, axis=1)
     dataframe[out_name] = result[out_name]
 
-    meta2 = [(f"{out_name}_time", np.dtype('datetime64[ns]'))]
-    result2 = dataframe.apply(unash_hash, unhash=hasher.unhash, hash_col=out_name, meta=meta2, axis=1)
-    dataframe[f"{out_name}_time"] = result2[f"{out_name}_time"]
-
     return dataframe
 
 
