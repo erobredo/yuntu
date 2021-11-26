@@ -10,8 +10,8 @@ class CopyDatastore(Datastore):
     """A datastore that copies all files to a target_directory and inserts
     metadata into a new collection"""
 
-    def __init__(self, *args, collection, query, limit=None, offset=0,
-                 target_path, keep_metadata=True, absolute_path=False,
+    def __init__(self, *args, collection, query=None, limit=None, offset=0,
+                 target_path=None, keep_metadata=True, absolute_path=False,
                  keep_id=True, tqdm=None, **kwargs):
         self.limit = limit
         self.offset = offset
@@ -75,7 +75,6 @@ class CopyDatastore(Datastore):
                     yield recording
         else:
             for recording in self.collection.recordings(query=self.query)[self.query_slice]:
-                pbar.update(1)
                 yield recording
 
     def iter_annotations(self, datum):

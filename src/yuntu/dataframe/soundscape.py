@@ -1,19 +1,16 @@
 """Dataframe accesors for soundscape methods"""
 import numpy as np
 import pandas as pd
+import datetime
 import pytz
-from dask.diagnostics import ProgressBar
-from yuntu.soundscape.utils import absolute_timing
-from yuntu.soundscape.hashers.base import Hasher
-from yuntu.soundscape.hashers.crono import CronoHasher
-from yuntu.soundscape.hashers.crono import DEFAULT_HASHER_CONFIG
-from yuntu.soundscape.pipelines.build_soundscape import HashSoundscape, AbsoluteTimeSoundscape
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
-import pytz
-import numpy as np
-import datetime
+from dask.diagnostics import ProgressBar
 
+from yuntu.soundscape.utils import absolute_timing, aware_time
+from yuntu.soundscape.hashers.base import Hasher
+from yuntu.soundscape.hashers.crono import CronoHasher, DEFAULT_HASHER_CONFIG
+from yuntu.soundscape.pipelines.build_soundscape import HashSoundscape, AbsoluteTimeSoundscape
 
 ID = 'id'
 START_TIME = 'start_time'
@@ -240,85 +237,101 @@ class SoundscapeAccessor:
 
         return ax
 
-    def plot_cycle(self, rgb, hash_col=None, cycle_config=DEFAULT_HASHER_CONFIG, aggr="mean", xticks=10,
-                   yticks=10, ylabel="Frequency", xlabel="Time", interpolation="bilinear",
-                   time_format='%H:%M:%S', view_time_zone="America/Mexico_city", ax=None):
-        """Plot soundscape according to cycle configs."""
-        if ax is None:
-            ax = plt.gca()
-        time_module = cycle_config["time_module"]
-        time_unit = cycle_config["time_unit"]
-        local_zone = pytz.timezone(view_time_zone)
-        do_hash = False
-        hash_name = "crono_hasher"
-        if hash_col is None:
-            do_hash = True
-        elif hash_col not in list(self._obj.columns):
-            hash_name = hash_col
-            do_hash = True
+def plot_cycle(self, rgb, hash_col=None, cycle_config=DEFAULT_HASHER_CONFIG, aggr="mean", xticks=10,
+               yticks=10, ylabel="Frequency", xlabel="Time", interpolation="bilinear",
+               time_format='%H:%M:%S', view_time_zone="America/Mexico_city", ax=None):
+    """Plot soundscape according to cycle configs."""
+    if ax is None:
+        ax = plt.gca()
+
+    time_module = cycle_config["time_module"]
+    time_unit = cycle_config["time_unit"]
+    zero_t = None
+
+    if "aware_start" in cycle_config:
+        if cycle_config["aware_start"] is not None:
+            zero_t = cycle_config["aware_start"]
+    if zero_t is None:
+        if "start_time" in cycle_config and "start_tzone" in cycle_config and "start_format" in cycle_config:
+            zero_t = aware_time(cycle_config["start_time"], cycle_config["start_tzone"], cycle_config["start_format"])
         else:
-            hash_name = hash_col
+            raise ValueError("Must provide starting time information to interpret hash")
+    local_zone = pytz.timezone(view_time_zone)
+    do_hash = False
+    hash_name = "crono_hasher"
+    if hash_col is None:
+        do_hash = True
+    elif hash_col not in list(self._obj.columns):
+        hash_name = hash_col
+        do_hash = True
+    else:
+        hash_name = hash_col
 
-        df = self._obj
-        if do_hash:
-            hasher = CronoHasher(**cycle_config)
-            hashed_df = df.sndscape.add_hash(hasher, out_name=hash_name)
-        else:
-            hashed_df = df
+    df = self._obj
+    if do_hash:
+        hasher = CronoHasher(**cycle_config)
+        hashed_df = df.sndscape.add_hash(hasher, out_name=hash_name)
+    else:
+        hashed_df = df
 
-        max_hash = hashed_df[hash_col].max()
-        all_hashes = list(np.arange(0, max_hash+1))
+    max_hash = time_module
+    all_hashes = list(np.arange(0, max_hash))
 
-        missing_hashes = [x for x in all_hashes if x not in list(hashed_df[hash_name].unique())]
-        nfreqs = hashed_df["max_freq"].unique().size
-        min_t =  hashed_df[f"{hash_name}_time"].min()
-        max_t =  hashed_df[f"{hash_name}_time"].max()
-        max_f = hashed_df["max_freq"].max()
-        min_f = hashed_df["min_freq"].min()
-        nfeatures = len(rgb)
+    missing_hashes = [x for x in all_hashes if x not in list(hashed_df[hash_name].unique())]
+    nfreqs = hashed_df["max_freq"].unique().size
 
-        max_indices = hashed_df[rgb].max().values
-        min_indices = hashed_df[rgb].min().values
-        ranges = max_indices - min_indices
+    max_f = hashed_df["max_freq"].max()
+    min_f = hashed_df["min_freq"].min()
+    nfeatures = len(rgb)
 
-        proj_df = hashed_df[["max_freq", f"{hash_name}_time"]+rgb].copy()
+    max_indices = hashed_df[rgb].max().values
+    min_indices = hashed_df[rgb].min().values
+    ranges = max_indices - min_indices
 
-        for n, ind in enumerate(rgb):
-            proj_df.loc[:, ind] = proj_df[ind].apply(lambda x: (x - min_indices[n]) / ranges[n])
+    proj_df = hashed_df[["max_freq", hash_name]+rgb].copy()
 
-        norm_feature_spec = (np.flip(np.reshape(proj_df
-                                         .groupby(by=["max_freq", f"{hash_name}_time"], as_index=False)
-                                         .agg(aggr)
-                                         .sort_values(by=["max_freq", f"{hash_name}_time"])[rgb].values, [nfreqs,-1,nfeatures]),axis=0))
+    for n, ind in enumerate(rgb):
+        proj_df.loc[:, ind] = proj_df[ind].apply(lambda x: (x - min_indices[n]) / ranges[n])
 
-        ntimes = norm_feature_spec.shape[1]
+    proj_df.loc[: , f"{hash_name}_time"] = proj_df[hash_name].apply(lambda x: zero_t + datetime.timedelta(seconds=float(x*time_unit)))
+    min_t = proj_df[f"{hash_name}_time"].min()
+    max_t = proj_df[f"{hash_name}_time"].max()
 
-        # Fill missing units
-        null_arr = np.empty([nfreqs,nfeatures])
-        null_arr[:,:] = np.NaN
-        for x in missing_hashes:
-            norm_feature_spec = np.insert(norm_feature_spec, x+1, null_arr, 1)
+    proj_df = proj_df[["max_freq", f"{hash_name}_time"]+rgb]
+    norm_feature_spec = (np.flip(np.reshape(proj_df
+                                     .groupby(by=["max_freq", f"{hash_name}_time"], as_index=True)
+                                     .agg(aggr)
+                                     .reset_index()
+                                     .sort_values(by=["max_freq", f"{hash_name}_time"])[rgb].values, [nfreqs,-1,nfeatures]),axis=0))
 
-        if norm_feature_spec.shape[-1] == 2:
-            norm_feature_spec = np.concatenate([norm_feature_spec,
-                                                np.zeros([norm_feature_spec.shape[0],
-                                                          norm_feature_spec.shape[1], 1])], axis=-1)
-        ax.imshow(np.flip(norm_feature_spec, axis=0), aspect="auto", interpolation=interpolation)
-        tstep = float(time_module)/xticks
-        ax.set_xticks(np.arange(0,time_module,tstep))
-        tlabel_step = datetime.timedelta(seconds=time_unit)*time_module / xticks
+    ntimes = norm_feature_spec.shape[1]
 
-        ax.set_xticklabels([(min_t+tlabel_step*i).astimezone(local_zone).strftime(format=time_format)
-                           for i in range(xticks)])
+    # Fill missing units
+    null_arr = np.empty([nfreqs,nfeatures])
+    null_arr[:,:] = np.NaN
+    for x in missing_hashes:
+        norm_feature_spec = np.insert(norm_feature_spec, x+1, null_arr, 1)
 
-        ax.invert_yaxis()
-        fstep = float(nfreqs)/yticks
-        ax.set_yticks(np.arange(0,nfreqs+fstep,fstep))
-        flabel_step = float(max_f-min_f)/yticks
-        yticklabels = ["{:.2f}".format(x) for x in list(np.arange(min_f/1000,(max_f+flabel_step)/1000,flabel_step/1000))]
-        ax.set_yticklabels(yticklabels)
+    if norm_feature_spec.shape[-1] == 2:
+        norm_feature_spec = np.concatenate([norm_feature_spec,
+                                            np.zeros([norm_feature_spec.shape[0],
+                                                      norm_feature_spec.shape[1], 1])], axis=-1)
+    ax.imshow(np.flip(norm_feature_spec, axis=0), aspect="auto", interpolation=interpolation)
+    tstep = float(time_module)/xticks
+    ax.set_xticks(np.arange(0,time_module,tstep))
+    tlabel_step = datetime.timedelta(seconds=time_unit)*time_module / xticks
 
-        ax.set_ylabel(f"{ylabel} (kHz)")
-        ax.set_xlabel(f"{xlabel} ({time_format})")
+    ax.set_xticklabels([(min_t+tlabel_step*i).astimezone(local_zone).strftime(format=time_format)
+                       for i in range(xticks)])
 
-        return ax
+    ax.invert_yaxis()
+    fstep = float(nfreqs)/yticks
+    ax.set_yticks(np.arange(0,nfreqs+fstep,fstep))
+    flabel_step = float(max_f-min_f)/yticks
+    yticklabels = ["{:.2f}".format(x) for x in list(np.arange(min_f/1000,(max_f+flabel_step)/1000,flabel_step/1000))]
+    ax.set_yticklabels(yticklabels)
+
+    ax.set_ylabel(f"{ylabel} (kHz)")
+    ax.set_xlabel(f"{xlabel} ({time_format})")
+
+    return ax

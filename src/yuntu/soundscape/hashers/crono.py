@@ -68,8 +68,6 @@ class CronoHasher(Hasher):
                 raise ValueError("Argument 'start_tzone' must be a string.")
             if not isinstance(start_time, str):
                 raise ValueError("Argument 'start_time' must be a string.")
-            if not isinstance(start_tzone, str):
-                raise ValueError("Argument 'start_tzone' must be a string.")
             if not isinstance(start_format, str):
                 raise ValueError("Argument 'start_format' must be a string.")
             self.start = aware_time(start_time, start_tzone, start_format)
