@@ -161,7 +161,7 @@ class SoundscapeAccessor:
 
     def plot_sequence(self, rgb, units=None, view_time_zone="America/Mexico_city", xticks=10,
                       yticks=10, ylabel="Frequency", xlabel="Time", interpolation="bilinear",
-                      time_format='%d-%m-%Y %H:%M:%S', ax=None):
+                      time_format='%d-%m-%Y %H:%M:%S', ax=None, **kwargs):
         """Plot sequential soundscape."""
 
         if "abs_start_time" not in self._obj.columns or "abs_end_time" not in self._obj.columns:
@@ -217,7 +217,7 @@ class SoundscapeAccessor:
                                                           norm_feature_spec.shape[1], 1])], axis=-1)
 
 
-        ax.imshow(np.flip(norm_feature_spec, axis=0), aspect="auto")
+        ax.imshow(np.flip(norm_feature_spec, axis=0), aspect="auto", interpolation=interpolation, **kwargs)
         tstep = float(ntimes)/xticks
         ax.set_xticks(np.arange(0,ntimes+tstep,tstep))
         tlabel_step = (max_t - min_t) / xticks
@@ -238,7 +238,7 @@ class SoundscapeAccessor:
 
     def plot_cycle(self, rgb, hash_col=None, cycle_config=DEFAULT_HASHER_CONFIG, aggr="mean", xticks=10,
                    yticks=10, ylabel="Frequency", xlabel="Time", interpolation="bilinear",
-                   time_format='%H:%M:%S', view_time_zone="America/Mexico_city", ax=None):
+                   time_format='%H:%M:%S', view_time_zone="America/Mexico_city", ax=None, **kwargs):
         """Plot soundscape according to cycle configs."""
         if ax is None:
             ax = plt.gca()
@@ -298,10 +298,10 @@ class SoundscapeAccessor:
 
         proj_df = proj_df[["max_freq", f"{hash_name}_time"]+rgb]
         norm_feature_spec = (np.flip(np.reshape(proj_df
-                                         .groupby(by=["max_freq", f"{hash_name}_time"], as_index=True)
-                                         .agg(aggr)
-                                         .reset_index()
-                                         .sort_values(by=["max_freq", f"{hash_name}_time"])[rgb].values, [nfreqs,-1,nfeatures]),axis=0))
+                                                .groupby(by=["max_freq", f"{hash_name}_time"], as_index=True)
+                                                .agg(aggr)
+                                                .reset_index()
+                                                .sort_values(by=["max_freq", f"{hash_name}_time"])[rgb].values, [nfreqs,-1,nfeatures]),axis=0))
 
         ntimes = norm_feature_spec.shape[1]
 
@@ -315,7 +315,7 @@ class SoundscapeAccessor:
             norm_feature_spec = np.concatenate([norm_feature_spec,
                                                 np.zeros([norm_feature_spec.shape[0],
                                                           norm_feature_spec.shape[1], 1])], axis=-1)
-        ax.imshow(np.flip(norm_feature_spec, axis=0), aspect="auto", interpolation=interpolation)
+        ax.imshow(np.flip(norm_feature_spec, axis=0), aspect="auto", interpolation=interpolation, **kwargs)
         tstep = float(time_module)/xticks
         ax.set_xticks(np.arange(0,time_module,tstep))
         tlabel_step = datetime.timedelta(seconds=time_unit)*time_module / xticks
