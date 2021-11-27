@@ -148,7 +148,9 @@ class TimeMediaMixin:
         data['array'] = None
 
         if not self.path_exists() or not lazy:
-            rs_array = resample(self.array, self.resolution, resolution, **kwargs)
+            print(self.time_axis.resolution)
+            print(resolution)
+            rs_array = resample(self.array, self.time_axis.resolution, resolution, **kwargs)
             data['array'] = rs_array
 
         return type(self)(**data)
