@@ -145,10 +145,11 @@ class TimeMediaMixin:
         data = self._copy_dict()
         data['lazy'] = lazy
         data['time_axis'] = self.time_axis.resample(resolution)
+        data['array'] = None
 
-        if not self.path_exists() or self._array is not None:
-            data = resample(self.array, self.resolution, resolution, **kwargs)
-            data['array'] = data
+        if not self.path_exists() or not lazy:
+            rs_array = resample(self.array, self.resolution, resolution, **kwargs)
+            data['array'] = rs_array
 
         return type(self)(**data)
 
