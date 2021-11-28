@@ -111,6 +111,10 @@ class Feature(Media):
             f'(extension={extension})')
         raise ValueError(message)
 
+    def write(self, path):  # pylint: disable=arguments-differ
+        """Write the spectrogram matrix into the filesystem."""
+        raise NotImplementedError("This feature has no write method.")
+
 
 class TimeFeature(TimeMediaMixin, Feature):
     pass
