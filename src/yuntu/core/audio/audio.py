@@ -356,8 +356,8 @@ class Audio(TimeMedia):
 
         out_range = None
         duration = min(self.size/self.samplerate, other.size/self.samplerate)
-        with self.cut(start_time=0, end_time=duration) as blend0:
-            with other.cut(start_time=0, end_time=duration) as blend1:
+        with self.cut(start_time=self._get_start(), end_time=self._get_start()+duration) as blend0:
+            with other.cut(start_time=other._get_start(), end_time=other._get_start()+duration) as blend1:
                 if normalize_first:
                     self_max = np.amax(self.array)
                     self_min = np.amin(self.array)
