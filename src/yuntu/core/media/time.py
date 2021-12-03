@@ -278,7 +278,9 @@ class TimeMediaMixin:
             # into acount possible cuts and thus might not give the correct
             # result.
             lazy = False
+
         kwargs_dict['lazy'] = lazy
+        kwargs_dict['duration'] = kwargs_dict['window'].end - kwargs_dict['window'].start
 
         if not lazy:
             start = self.get_index_from_time(bounded_start_time)

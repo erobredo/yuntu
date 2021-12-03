@@ -15,7 +15,8 @@ from yuntu.core.audio.utils import read_info
 from yuntu.core.audio.utils import read_media
 from yuntu.core.audio.utils import write_media
 import yuntu.core.audio.audio_features as features
-
+from yuntu.core.windows import TimeWindow
+from yuntu.core.geometry import TimeInterval
 
 CHANNELS = 'nchannels'
 SAMPLE_WIDTH = 'sampwidth'
@@ -35,6 +36,11 @@ REQUIRED_MEDIA_INFO_FIELDS = [
     DURATION,
     SAMPLE_RATE
 ]
+OUT_RANGE = {
+    "minmax": lambda x1,x2,y1,y2: [min(x1,y1), max(x2,y2)],
+    "left": lambda x1,x2,y1,y2: [x1,x2],
+    "right": lambda x1,x2,y1,y2: [y1,y2]
+}
 
 MediaInfo = namedtuple('MediaInfo', MEDIA_INFO_FIELDS)
 MediaInfoType = Dict[str, Union[int, float]]
@@ -185,7 +191,7 @@ class Audio(TimeMedia):
 
     @property
     def duration(self):
-        return self.window.end
+        return self.window.end - self.window.start
 
     @classmethod
     def from_instance(
@@ -331,6 +337,69 @@ class Audio(TimeMedia):
         from IPython.display import Audio as HTMLAudio
         rate = self.samplerate * speed
         return HTMLAudio(data=self.array, rate=rate)
+
+    def blend(self, other, weight_range=None, weights=None, normalize_first=False, new_range='left'):
+        '''Blend this audio signal with another signal and produce Audio object'''
+        if self.samplerate != other.samplerate:
+            raise ValueError("Both pieces should have the same samplerate")
+
+        if weights is None and weight_range is None:
+            weights = [0.5, 0.5]
+        elif weight_range is not None:
+            l = np.random.uniform(weight_range[0], weight_range[1], 1)[0]
+            weights = [l, 1-l]
+        elif weights is not None:
+            if weights[0] > weights[1]:
+                raise ValueError("Wrong weight range. First element must be smaller or equal to second element.")
+            weights = np.array(weights)
+            weights = weights/np.sum(weights)
+
+        out_range = None
+        duration = min(self.size/self.samplerate, other.size/self.samplerate)
+        with self.cut(start_time=0, end_time=duration) as blend0:
+            with other.cut(start_time=0, end_time=duration) as blend1:
+                if normalize_first:
+                    self_max = np.amax(self.array)
+                    self_min = np.amin(self.array)
+                    other_max = np.amax(other.array)
+                    other_min = np.amin(other.array)
+                    blend0 = (blend0-self_min)/(self_max-self_min)
+                    blend1 = (blend1-other_min)/(other_max-other_min)
+
+                    if new_range is None:
+                        new_range = "left"
+
+                right = min(blend0.size, blend1.size)
+                sig = weights[0]*blend0[:right] + weights[1]*blend1[:right]
+                metadata = {"blended_from": [self.to_dict(), other.to_dict()],
+                            "normalize_first": normalize_first,
+                            "array_cut": [0, right],
+                            "time_cut": [0, duration]
+                           }
+
+                if not normalize_first:
+
+                    return Audio(timeexp=1.0, array=sig, samplerate=self.samplerate, duration=duration, metadata=metadata)
+
+                if isinstance(new_range, str):
+                    out_range = OUT_RANGE[new_range](self_min, self_max, other_min, other_max)
+                else:
+                    out_range = new_range
+
+                minsig = np.amin(sig)
+                maxsig = np.amax(sig)
+                sig = ((sig - minsig)/(maxsig-minsig))
+                sig = (1-sig)*out_range[0] + sig*out_range[1]
+
+                metadata["new_range"] = new_range
+                window = TimeWindow(start=0, end=duration)
+
+                return type(self)(timeexp=1.0,
+                                  array=sig,
+                                  window=window,
+                                  samplerate=self.samplerate,
+                                  duration=duration,
+                                  metadata=metadata)
 
     def plot(self, ax=None, **kwargs):
         """Plot soundwave in the given axis."""
