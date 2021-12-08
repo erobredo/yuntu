@@ -113,9 +113,9 @@ class AnnotationAccessor:
             raise ValueError("Annotations should have an absolute time reference in order to compute activity.")
 
         if min_t is None:
-            min_t = self._obj.abs_start_time.min()
+            min_t = pd.to_datetime(self._obj.abs_start_time.min(), utc=True)
         if max_t is None:
-            max_t = self._obj.abs_start_time.max()
+            max_t = pd.to_datetime(self._obj.abs_end_time.max(), utc=True)
 
         if min_t >= max_t:
             raise ValueError("Wrong time range. Try a more accurate specification.")
