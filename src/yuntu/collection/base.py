@@ -160,11 +160,11 @@ class Collection:
 
     def update_recordings(self, query, set_obj):
         """Update matches."""
-        return self.db_manager.update(query, set_obj, model="recordings")
+        return self.db_manager.update(query, set_obj, model="recording")
 
     def update_annotations(self, query, set_obj):
         """Update matches."""
-        return self.db_manager.update(query, set_obj, model="annotations")
+        return self.db_manager.update(query, set_obj, model="annotation")
 
     def delete_recordings(self, query):
         """Delete matches."""
