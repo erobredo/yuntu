@@ -36,7 +36,8 @@ def build_base_annotation_model(db):
         labels = Required(Json)
         metadata = Required(Json)
 
-        parent = Optional('Annotation')
+        parent = Optional('Annotation', reverse='children')
+        children = Optional('Annotation', reverse='parent')
 
         start_time = Optional(float)
         end_time = Optional(float)
