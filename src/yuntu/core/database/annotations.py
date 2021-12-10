@@ -1,6 +1,7 @@
 """Distinct types of annotations."""
 from pony.orm import Required
 from pony.orm import Optional
+from pony.orm import Set
 from pony.orm import PrimaryKey
 from pony.orm import Json
 from datetime import datetime
