@@ -36,6 +36,8 @@ def build_base_annotation_model(db):
         labels = Required(Json)
         metadata = Required(Json)
 
+        parent = Optional('Annotation')
+
         start_time = Optional(float)
         end_time = Optional(float)
         max_freq = Optional(float)
@@ -74,6 +76,7 @@ def build_base_annotation_model(db):
                     f'Annotation type {self.type} requires setting '
                     'a geometry string (in wkt format).')
                 raise ValueError(message)
+
     return Annotation
 
 def build_timed_annotation_model(Annotation):

@@ -155,6 +155,11 @@ def insert_probe_annotations(partition, probe_config, col_config, overwrite=Fals
                     recording = col.recordings(query=lambda recording: recording.id == rid, iterate=False)[0]
                     for i in range(len(annotations)):
                         annotations[i]["recording"] = recording
+                        if "parent" in annotations[i]:
+                            pid = annotations[i]["parent"]
+                            if pid is not None:
+                                parent = col.annotations(query=lambda annotation: annotation.id == pid, iterate=False)[0]
+                                annotations[i]["parent"] = parent
                     col.annotate(annotations)
 
             new_row = {"id": rid}

@@ -35,8 +35,19 @@ class Probe(ABC):
         geom = output["geometry"]
         start_time, min_freq, end_time, max_freq = geom.geometry.bounds
         wkt = geom.geometry.wkt
-        meta = {"score": output["score"]}
+
+        if "metadata" in output:
+            meta = output["metadata"]
+        else:
+            meta = {}
+
+        meta["score"] = output["score"]
         geom_type = str(geom.name).replace("Types.", "")
+
+        if "parent" in output:
+            parent = output["parent"]
+        else:
+            parent = None
 
         return {
             "labels": output["labels"],
@@ -46,7 +57,8 @@ class Probe(ABC):
             "max_freq": max_freq,
             "min_freq": min_freq,
             "geometry": wkt,
-            "metadata": meta
+            "metadata": meta,
+            "parent": parent
         }
 
     @property
