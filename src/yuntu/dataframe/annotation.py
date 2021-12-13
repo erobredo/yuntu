@@ -241,6 +241,8 @@ class AnnotationAccessor:
         else:
             module = None
             nframes = int(np.round(total_time/time_unit))
+            if nframes == 0 and not dann.empty:
+                nframes = 1
 
         activities = {}
         if target_labels is None:
