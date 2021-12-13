@@ -5,6 +5,12 @@ An audio dataframe is a
 import numpy as np
 import pandas as pd
 import datetime
+import shapely.wkt
+from shapely.ops import unary_union
+from shapely.geometry import Polygon, box
+
+from yuntu.core.utils.atlas import buffer_geometry
+from yuntu.core.annotation.labels import Labels
 from yuntu.core.annotation.annotation import Annotation
 
 
@@ -25,6 +31,100 @@ OPTIONAL_ANNOTATION_COLUMNS = [
     ABS_END_TIME
 ]
 
+SINGLE_COUNTER = lambda x: x+1
+BOOLEAN_COUNTER = lambda x: np.maximum(x, np.ones_like(x))
+DEFAULT_COUNTER = SINGLE_COUNTER
+
+def buffer_geometry_clip(geom, radius):
+    '''Buffers geometry clipping to safe ranges'''
+    if not isinstance(geom, Polygon):
+        raise NotImplementedError(f"Geometry type not supported. Only polygons can be disolved for now.")
+
+    time_radius, freq_radius = radius
+    radius = [time_radius, max(1e-10, freq_radius)]
+    bgeom = buffer_geometry(geom, radius)
+    x, y = bgeom.exterior.coords.xy
+    y = np.clip(y, 0, 1e16)
+    x = np.clip(x, 0, None)
+    return Polygon(zip(x,y)).simplify(0)
+
+def disolve_annotations(group, key, radius, join_meta_func=None, keep_radius=True):
+    '''Return disolved annotations within group'''
+
+    recording, label_str, dtype, classtype = group.name
+    ori_geoms = group[["id", "labels", "metadata"]]
+    ori_geoms.loc[:, "geometry"] = group.geometry.apply(lambda x: shapely.wkt.loads(x))
+
+    if radius is not None:
+        ref_geometries = [buffer_geometry_clip(x, radius) for x in ori_geoms.geometry.values]
+    else:
+        ref_geometries = [x for x in ori_geoms.geometry.values]
+
+    ref_geometries = unary_union(ref_geometries)
+
+    if classtype == "TimedAnnotation":
+        min_abs_start_time = group.abs_start_time.min()
+        min_start_time = group.start_time.min()
+
+    rows = []
+    geoms = ref_geometries
+    if isinstance(geoms, Polygon):
+        geoms = [geoms]
+
+    for geom in geoms:
+        row = {}
+        members = ori_geoms[ori_geoms.geometry.apply(lambda x: geom.buffer(1e-10).contains(x))]
+        member_ids = list(members.id.values.astype(int))
+        labels = None
+        for n, lab in members.labels.items():
+            llab = Labels.from_dict(lab)
+            if labels is None:
+                labels = llab
+                continue
+            for l in llab:
+                if l.key not in labels:
+                    labels.add(l)
+
+        if join_meta_func is not None:
+            metadata = join_meta_func(members.metadata.values)
+        else:
+            metadata = {}
+
+        metadata["disolve"] = {
+            "members": member_ids,
+            "group": {"key": key,
+                      "value": label_str,
+                      "radius": radius,
+                      "keep_radius": keep_radius}
+        }
+
+        if not keep_radius and radius is not None:
+            if len(member_ids) == 1:
+                geometry = members.iloc[0].geometry
+            else:
+                geometry = geom.intersection(box(*unary_union(members.geometry.values).bounds, ccw=True))
+        else:
+            geometry = geom
+
+        start_time, min_freq, end_time, max_freq = geometry.bounds
+
+        labels = labels.to_dict()
+        row["geometry"] = geometry.wkt
+        row["start_time"] = start_time
+        row["end_time"] = end_time
+        row["max_freq"] = max_freq
+        row["min_freq"] = min_freq
+
+        if classtype == "TimedAnnotation":
+            row["abs_start_time"] = min_abs_start_time + datetime.timedelta(seconds=start_time-min_start_time)
+            row["abs_end_time"] = min_abs_start_time + datetime.timedelta(seconds=end_time-min_start_time)
+
+        row["labels"] = labels
+        row["metadata"] = metadata
+        row["labels"] = labels
+        rows.append(row)
+
+    return pd.DataFrame(rows)
 
 @pd.api.extensions.register_dataframe_accessor("annotation")
 class AnnotationAccessor:
@@ -108,7 +208,19 @@ class AnnotationAccessor:
             labels_column=labels_column,
             id_column=id_column)
 
-    def get_activity(self, time_unit=60, time_module=None, target_labels=None, min_t=None, max_t=None, exclude=[]):
+    def disolve(self, key, radius=(1.5, 0), join_meta_func=None, keep_radius=True):
+        '''Merge annotations by geometry and key'''
+
+        if len(self._obj.classtype.unique()) > 1:
+            raise ValueError("Can only disolve dataframes with homogeneous classtypes for now. Filter by classtype first.")
+
+        return (self._obj
+                .groupby(by=["recording", key, "type", "classtype"], as_index=True)
+                .apply(disolve_annotations, radius=radius, key=key, join_meta_func=join_meta_func, keep_radius=keep_radius)
+                .reset_index(level=-1, drop=True)
+                .reset_index())
+
+    def get_activity(self, count_func=DEFAULT_COUNTER, time_unit=60, time_module=None, target_labels=None, min_t=None, max_t=None, exclude=[]):
         if "abs_start_time" not in self._obj.columns:
             raise ValueError("Annotations should have an absolute time reference in order to compute activity.")
 
@@ -142,11 +254,11 @@ class AnnotationAccessor:
                     if time_module is None:
                         start = int(np.round(float(datetime.timedelta.total_seconds(pd.to_datetime(abs_start_time, utc=True) - min_t))/time_unit))
                         stop = max(int(np.round(float(end_time - start_time)/time_unit)), start)
-                        activity[start:stop+1] += 1
+                        activity[start:stop+1] = count_func(activity[start:stop+1])
                     else:
                         remainder = (pd.to_datetime(abs_start_time, utc=True) - min_t.astimezone("utc")) % module
                         index = np.int64(int(round((remainder/time_unit).total_seconds())) % time_module)
-                        activity[index] += 1
+                        activity[index] = count_func(activity[index])
             activities["Any"] = activity
         else:
             nlabels = len(target_labels)
