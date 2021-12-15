@@ -26,7 +26,7 @@ def create_postgres_spatial_structure(db):
         db.execute('''CREATE INDEX recording_geom_idx ON recording USING GIST(geom);''')
         db.commit()
     except DuplicateColumn as e:
-        print("Geometry column already exists, continue...")
+        pass
     except ProgrammingError as e:
         except_str = str(e)
         if 'column "geom" of relation "recording" already exists' in except_str:
