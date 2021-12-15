@@ -73,7 +73,8 @@ def disolve_annotations(group, key, radius, join_meta_func=None, keep_radius=Tru
 
     for geom in geoms:
         row = {}
-        members = ori_geoms[ori_geoms.geometry.apply(lambda x: geom.buffer(1e-10).contains(x))]
+        bgeom = geom.buffer(1e-10)
+        members = ori_geoms[ori_geoms.geometry.apply(lambda x: x.within(bgeom))]
         member_ids = list(members.id.values.astype(int))
         labels = None
         for n, lab in members.labels.items():
