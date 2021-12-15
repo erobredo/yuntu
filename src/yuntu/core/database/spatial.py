@@ -30,7 +30,7 @@ def create_postgres_spatial_structure(db):
     except ProgrammingError as e:
         except_str = str(e)
         if 'column "geom" of relation "recording" already exists' in except_str:
-            print("Geometry column already exists, continue...")
+            pass
         else:
             print(e)
             raise ValueError("Postgis extension should be installed as superuser independently in order to create a spatial structure in postgres.")
