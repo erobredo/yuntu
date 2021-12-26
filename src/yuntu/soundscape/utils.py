@@ -51,6 +51,40 @@ def decile_mod(x, tolerance=0.1):
 
     return mods, mod_deciles, perc_ranges
 
+def slice_grid(time_unit, duration, frequency_bins, frequency_limits,
+               time_hop=1.0, frequency_hop=1.0):
+    """Produce a list of time frequency windows."""
+    frequency_unit = (frequency_limits[1]-frequency_limits[0]) / frequency_bins
+    time_hop = time_unit*time_hop
+    frequency_hop = frequency_unit*frequency_hop
+
+    windows = []
+    weights = []
+    for t in np.arange(0, duration, time_hop):
+        if t+time_unit <= duration:
+            win = []
+            wei = []
+            start_time = t
+            end_time = t+time_unit
+            size_T = end_time - start_time
+            if size_T >= time_unit / 2:
+                for f in np.arange(frequency_limits[0],
+                                   frequency_limits[1],
+                                   frequency_hop):
+                    if f+frequency_unit <= frequency_limits[1]:
+                        min_freq = f
+                        max_freq = f+frequency_unit
+                        wei.append((end_time - start_time) / time_unit)
+                        win.append(TimeFrequencyWindow(start=start_time,
+                                                       end=end_time,
+                                                       min=min_freq,
+                                                       max=max_freq))
+                windows.append(win)
+                weights.append(wei)
+
+
+    return np.array(windows), np.array(weights)
+
 def slice_windows(time_unit, duration, frequency_bins, frequency_limits,
                   time_hop=1.0, frequency_hop=1.0):
     """Produce a list of time frequency windows."""

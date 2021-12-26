@@ -221,10 +221,15 @@ class SoundscapeAccessor:
         tstep = float(ntimes)/xticks
         ax.set_xticks(np.arange(0,ntimes+tstep,tstep))
         tlabel_step = (max_t - min_t) / xticks
-        ax.set_xticklabels([utc_zone.localize(min_t+tlabel_step*i).astimezone(local_zone).strftime(format=time_format)
-                           for i in range(xticks)]+[utc_zone.localize(max_t).astimezone(local_zone).strftime(format=time_format)])
 
+        try:
+            tlabels = [utc_zone.localize(min_t+tlabel_step*i) for i in range(xticks)]+[utc_zone.localize(max_t)]
+        except:
+            tlabels = [(min_t+tlabel_step*i) for i in range(xticks)]+[max_t]
+
+        ax.set_xticklabels([t.astimezone(local_zone).strftime(format=time_format) for t in tlabels])
         ax.invert_yaxis()
+
         fstep = float(nfreqs)/yticks
         ax.set_yticks(np.arange(0,nfreqs+fstep,fstep))
         flabel_step = float(max_f-min_f)/yticks
