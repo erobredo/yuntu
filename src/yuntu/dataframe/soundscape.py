@@ -216,8 +216,8 @@ class SoundscapeAccessor:
                                                 np.zeros([norm_feature_spec.shape[0],
                                                           norm_feature_spec.shape[1], 1])], axis=-1)
 
+        im = ax.imshow(np.flip(norm_feature_spec, axis=0), aspect="auto", interpolation=interpolation, **kwargs)
 
-        ax.imshow(np.flip(norm_feature_spec, axis=0), aspect="auto", interpolation=interpolation, **kwargs)
         tstep = float(ntimes)/xticks
         ax.set_xticks(np.arange(0,ntimes+tstep,tstep))
         tlabel_step = (max_t - min_t) / xticks
@@ -239,7 +239,7 @@ class SoundscapeAccessor:
         ax.set_ylabel(f"{ylabel} (kHz)")
         ax.set_xlabel(f"{xlabel} ({time_format}, {view_time_zone})")
 
-        return ax
+        return ax, im
 
     def plot_cycle(self, rgb, hash_col=None, cycle_config=DEFAULT_HASHER_CONFIG, aggr="mean", xticks=10,
                    yticks=10, ylabel="Frequency", xlabel="Time", interpolation="bilinear",
@@ -320,7 +320,7 @@ class SoundscapeAccessor:
             norm_feature_spec = np.concatenate([norm_feature_spec,
                                                 np.zeros([norm_feature_spec.shape[0],
                                                           norm_feature_spec.shape[1], 1])], axis=-1)
-        ax.imshow(np.flip(norm_feature_spec, axis=0), aspect="auto", interpolation=interpolation, **kwargs)
+        im = ax.imshow(np.flip(norm_feature_spec, axis=0), aspect="auto", interpolation=interpolation, **kwargs)
         tstep = float(time_module)/xticks
         ax.set_xticks(np.arange(0,time_module,tstep))
         tlabel_step = datetime.timedelta(seconds=time_unit)*time_module / xticks
@@ -338,4 +338,4 @@ class SoundscapeAccessor:
         ax.set_ylabel(f"{ylabel} (kHz)")
         ax.set_xlabel(f"{xlabel} ({time_format}, {view_time_zone})")
 
-        return ax
+        return ax, im
