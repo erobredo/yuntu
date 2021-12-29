@@ -215,6 +215,8 @@ class SoundscapeAccessor:
             norm_feature_spec = np.concatenate([norm_feature_spec,
                                                 np.zeros([norm_feature_spec.shape[0],
                                                           norm_feature_spec.shape[1], 1])], axis=-1)
+        elif norm_feature_spec.shape[-1] == 1:
+            norm_feature_spec = np.sqeeze(norm_feature_spec)
 
         im = ax.imshow(np.flip(norm_feature_spec, axis=0), aspect="auto", interpolation=interpolation, **kwargs)
 
@@ -320,6 +322,9 @@ class SoundscapeAccessor:
             norm_feature_spec = np.concatenate([norm_feature_spec,
                                                 np.zeros([norm_feature_spec.shape[0],
                                                           norm_feature_spec.shape[1], 1])], axis=-1)
+        elif norm_feature_spec.shape[-1] == 1:
+            norm_feature_spec = np.sqeeze(norm_feature_spec)
+
         im = ax.imshow(np.flip(norm_feature_spec, axis=0), aspect="auto", interpolation=interpolation, **kwargs)
         tstep = float(time_module)/xticks
         ax.set_xticks(np.arange(0,time_module,tstep))
