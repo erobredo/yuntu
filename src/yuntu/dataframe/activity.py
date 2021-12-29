@@ -92,7 +92,7 @@ class ActivityAccessor:
         return rarefact
 
     def plot(self, ax=None, time_format = '%d-%m-%Y %H:%M:%S', labels=None,
-             view_time_zone="America/Mexico_city", nticks=15, stacked=True):
+             view_time_zone="America/Mexico_city", nticks=15, stacked=True, **kwargs):
 
         if ax is None:
             ax = plt.gca()
@@ -103,7 +103,7 @@ class ActivityAccessor:
         if labels is None:
             labels = self.activity_columns
 
-        self._obj[labels].plot.area(ax=ax, stacked=stacked)
+        self._obj[labels].plot.area(ax=ax, stacked=stacked, **kwargs)
 
         nframes = self._obj.shape[0]
         step = float(nframes) / nticks
@@ -123,7 +123,7 @@ class ActivityAccessor:
 
     def plot_diversity(self, ax=None, time_format = '%d-%m-%Y %H:%M:%S', labels=None,
                        view_time_zone="America/Mexico_city", nticks=15,
-                       div_type="Shannon", component="alpha"):
+                       div_type="Shannon", component="alpha", **kwargs):
         if ax is None:
             ax = plt.gca()
 
@@ -133,9 +133,9 @@ class ActivityAccessor:
         div = self.diversity(div_type=div_type, component=component, labels=labels)
 
         if component in ["beta", "gamma"]:
-            div.diversity.plot(ax=ax)
+            div.diversity.plot(ax=ax, **kwargs)
         else:
-            div.diversity.plot.area(ax=ax)
+            div.diversity.plot.area(ax=ax, **kwargs)
 
             nframes = div.shape[0]
 
@@ -162,7 +162,7 @@ class ActivityAccessor:
         return ax
 
     def plot_richness(self, ax=None, time_format = '%d-%m-%Y %H:%M:%S', labels=None,
-                      view_time_zone="America/Mexico_city", total=False, nticks=15):
+                      view_time_zone="America/Mexico_city", total=False, nticks=15, **kwargs):
         if ax is None:
             ax = plt.gca()
 
@@ -172,9 +172,9 @@ class ActivityAccessor:
         rich = self.richness(labels=labels, total=total)
 
         if total:
-            rich.richness.plot(ax=ax)
+            rich.richness.plot(ax=ax, **kwargs)
         else:
-            rich.richness.plot.area(ax=ax)
+            rich.richness.plot.area(ax=ax, **kwargs)
 
             nframes = rich.shape[0]
             step = float(nframes) / nticks

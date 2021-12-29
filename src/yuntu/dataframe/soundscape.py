@@ -237,7 +237,7 @@ class SoundscapeAccessor:
         ax.set_yticklabels(yticklabels)
 
         ax.set_ylabel(f"{ylabel} (kHz)")
-        ax.set_xlabel(f"{xlabel} ({time_format})")
+        ax.set_xlabel(f"{xlabel} ({time_format}, {view_time_zone})")
 
         return ax
 
@@ -336,6 +336,6 @@ class SoundscapeAccessor:
         ax.set_yticklabels(yticklabels)
 
         ax.set_ylabel(f"{ylabel} (kHz)")
-        ax.set_xlabel(f"{xlabel} ({time_format})")
+        ax.set_xlabel(f"{xlabel} ({time_format}, {view_time_zone})")
 
         return ax
