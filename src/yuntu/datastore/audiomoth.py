@@ -3,10 +3,12 @@ import os
 from collections import OrderedDict
 import struct
 import re
+import pytz
 from datetime import datetime
 
 from yuntu.datastore.base import Storage
-from yuntu.core.audio.utils import hash_file, media_open, ag_glob
+from yuntu.core.audio.utils import hash_file, media_open
+from yuntu.core.database.recordings import ULTRASONIC_SAMPLERATE_THRESHOLD
 
 RIFF_ID_LENGTH = 4
 LENGTH_OF_COMMENT = 128
@@ -174,14 +176,7 @@ class AudioMothStorage(Storage):
 
     def get_metadata(self):
         meta = {"type": "AudioMothStorage"}
-        for fname in ag_glob(os.path.join(self.dir_path, '*.WAV')):
-            header = read_am_header(fname)
-            comment = header['icmt']['comment'].decode('utf-8').rstrip('\x00')
-            am_id = get_am_id(comment)
-            meta["am_id"] = am_id
-            break
-
-        meta["sd_path"] = self.dir_path
+        meta["dir_path"] = self.dir_path
 
         return meta
 
@@ -204,7 +199,7 @@ class AudioMothStorage(Storage):
             'duration': length / samplerate
         }
 
-        spectrum = 'ultrasonic' if samplerate > 50000 else 'audible'
+        spectrum = 'ultrasonic' if samplerate > ULTRASONIC_SAMPLERATE_THRESHOLD else 'audible'
 
         comment = header['icmt']['comment'].decode('utf-8').rstrip('\x00')
         battery = get_am_battery_state(comment)
@@ -219,12 +214,14 @@ class AudioMothStorage(Storage):
         }
 
         datetime_info = get_am_datetime(comment)
-        datetime = datetime_info['datetime']
+        datetime_ = datetime_info['datetime']
 
         if "(UTC)" in datetime_info["raw"]:
             time_zone = "UTC"
         else:
-            time_zone = datetime.tzinfo.tzname(datetime)
+            time_zone = datetime_.tzinfo.tzname(datetime_)
+
+        timezone_utc = pytz.timezone("UTC")
 
         return {
             'path': datum,
@@ -236,7 +233,7 @@ class AudioMothStorage(Storage):
             'time_raw': datetime_info['raw'],
             'time_format': datetime_info['format'],
             'time_zone': time_zone,
-            'time_utc': datetime
+            'time_utc': datetime_.astimezone(timezone_utc)
         }
 
     def prepare_annotation(self, datum, annotation):

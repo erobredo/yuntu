@@ -186,11 +186,10 @@ class Storage(Datastore):
 
     def iter(self):
         if self.tqdm is not None:
-            for fname in self.tqdm(ag_glob(os.path.join(self.dir_path,
-                                                        '*.WAV'))):
+            for fname in self.tqdm(ag_glob(os.path.join(self.dir_path,'*.WAV'))+ag_glob(os.path.join(self.dir_path, '*.wav'))):
                 yield fname
         else:
-            for fname in ag_glob(os.path.join(self.dir_path, '*.WAV')):
+            for fname in ag_glob(os.path.join(self.dir_path, '*.WAV'))+ag_glob(os.path.join(self.dir_path, '*.wav')):
                 yield fname
 
     def prepare_datum(self, datum):
@@ -211,7 +210,7 @@ class Storage(Datastore):
     @property
     def size(self):
         if self._size is None:
-            self._size = len(ag_glob(os.path.join(self.dir_path, '*.WAV')))
+            self._size = len(ag_glob(os.path.join(self.dir_path, '*.WAV'))+ag_glob(os.path.join(self.dir_path, '*.wav')))
         return self._size
 
     def create_datastore_record(self, collection):
