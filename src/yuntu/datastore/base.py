@@ -77,7 +77,10 @@ class Datastore(ABC):
         recording_insert_errors = 0
         annotation_insert_errors = 0
         for datum in self.iter():
-            meta = self.prepare_datum(datum)
+            try:
+                meta = self.prepare_datum(datum)
+            except:
+                meta = None
             if meta is not None:
                 meta['path'] = self.get_abspath(meta['path'])
                 meta['datastore'] = datastore_record
