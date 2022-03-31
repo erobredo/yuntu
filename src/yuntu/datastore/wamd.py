@@ -141,6 +141,28 @@ def read_wamd_info(path):
             offset += 6 + len
         return metadata
 
+def parse_wamd_coordinates(coords_str):
+    if 'S' in coords_str:
+        lat_sign = -1
+        lat_z = 'S'
+    else:
+        lat_sign = 1
+        lat_z = 'N'
+
+    if 'W' in coords_str:
+        lon_sign = -1
+        lon_z = 'W'
+    else:
+        lon_sign = 1
+        lon_z = 'E'
+
+    coords_str_arr = coords_str.split(lat_z)
+    lat_str = coords_str_arr[0].replace(',', '')
+    lon_str = coords_str_arr[1].replace(lon_z, '').replace(',','')
+    lat = lat_sign*float(lat_str)
+    lon = lon_sign*float(lon_str)
+
+    return lon, lat
 
 class WAMDStorage(Storage):
 
@@ -162,6 +184,7 @@ class WAMDStorage(Storage):
 
         timezone_utc = pytz.timezone("UTC")
         datetime_ = wamd_info.pop('timestamp')
+        longitude, latitude = parse_wamd_coordinates(wamd_info.pop(20))
 
         time_zone = datetime_.tzinfo.tzname(datetime_)
         time_format = '%H:%M:%S %d/%m/%Y (%Z)'
@@ -174,6 +197,8 @@ class WAMDStorage(Storage):
             'media_info': media_info,
             'metadata': wamd_info,
             'spectrum': spectrum,
+            'latitude': latitude,
+            'longitude': longitude,
             'time_raw': time_raw,
             'time_format': time_format,
             'time_zone': time_zone,
