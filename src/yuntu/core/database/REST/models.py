@@ -1,5 +1,8 @@
 from abc import ABC
 from abc import abstractmethod
+from yuntu.core.database.REST.utils import http_client, post_sync
+
+MAX_PAGE_SIZE = 10000
 
 class as_object:
     def __init__(self, datum):
@@ -10,13 +13,22 @@ class as_object:
         return self.__dict__
 
 class RESTModel(ABC):
+    """A base class for all REST models"""
 
-    def __init__(self, target_url, target_attr="results", page_size=1, auth=None, bucket=None):
+    _fmethod = post_sync
+
+    def __init__(self, target_url,
+                 page_size=1000, auth=None,
+                 base_filter=None):
         self.target_url = target_url
-        self.target_attr = target_attr
-        self.bucket = bucket
         self._auth = auth
-        self._page_size = page_size
+        self._page_size = min(page_size, MAX_PAGE_SIZE)
+        self._http = http_client()
+        self.base_filter = {}
+
+        if base_filter is not None:
+            self.base_filter = base_filter
+
 
     @property
     def page_size(self):
@@ -25,6 +37,9 @@ class RESTModel(ABC):
     @property
     def auth(self):
         return self._auth
+
+    def fetch_sync(self, url, params=None, auth=None):
+        return self._fmethod(self._http, url, params, auth)
 
     def set_page_size(self, page_size):
         self._page_size = page_size
@@ -38,7 +53,7 @@ class RESTModel(ABC):
         if limit is not None:
             count = 0
             for page in self.iter_pages(query, limit, offset):
-                meta_arr = page[self.target_attr]
+                meta_arr = self.extract_entries(page)
                 for meta in meta_arr:
                     if count > limit:
                         break
@@ -47,24 +62,100 @@ class RESTModel(ABC):
                     yield as_object(parsed)
         else:
             for page in self.iter_pages(query, limit, offset):
-                meta_arr = page[self.target_attr]
+                meta_arr = self.extract_entries(page)
                 for meta in meta_arr:
                     parsed = self.parse(meta, fetch_meta)
                     yield as_object(parsed)
 
-
-    @abstractmethod
-    def validate_query(self):
-        """Validate input query."""
-
-    @abstractmethod
-    def iter_pages(self, query=None, limit=None, offset=None, fetch_meta=True):
-        """Iterate rest pages and return json response"""
-
-    @abstractmethod
     def count(self, query=None):
         """Request results count"""
+        vquery = self.validate_query(query)
+        return self.result_size(vquery)
+
+    def iter_pages(self, query=None, limit=None, offset=None):
+        vquery = self.validate_query(query)
+        rec_count = self.count(query)
+
+        if limit is None:
+            npages = math.ceil(float(rec_count)/float(self.page_size))
+        else:
+            npages = math.ceil(float(limit)/float(self.page_size))
+
+        if offset is None:
+            offset = 0
+
+        for page in range(npages):
+            params = self.build_request_params(vquery, limit, offset)
+            yield self.fetch_sync(self._http, self.target_url,
+                                  params=params, auth=self.auth)
+
+    def build_request_params(self, query, limit, offset, sortby=None):
+        """Use query to build specific HTTP parameters"""
+        params = self.build_query_params(query)
+        params.update(self.build_paging_params(limit, offset))
+        #params.update(self.build_sorting_params(sortby))
+
+        return params
 
     @abstractmethod
-    def parse(self, datum, fetch_meta=True):
+    def extract_entries(self, page):
+        """Process page and produce a list of entries"""
+
+    @abstractmethod
+    def validate_query(self, query):
+        """Check if query is valid for REST service"""
+
+    @abstractmethod
+    def build_query_params(self, query):
+        """Use query to build specific HTTP parameters"""
+
+    @abstractmethod
+    def build_paging_params(self, limit, offset):
+        """Use query to build specific HTTP parameters"""
+
+    @abstractmethod
+    def build_sorting_params(self, sortby):
+        """Use query to build specific HTTP parameters"""
+
+    @abstractmethod
+    def result_size(self, query=None):
+        """Fetch the number of results in query"""
+
+    @abstractmethod
+    def parse(self, datum, **kwargs):
         """Parse incoming data to a common format"""
+
+
+class RESTAnnotation(RESTModel, ABC):
+
+    @abstractmethod
+    def get_recording(self, datum):
+        """Get annotation's recording from reference"""
+
+    @abstractmethod
+    def parse_annotation(self, datum):
+        """Parse annotation's labels from datum"""
+
+    def parse(self, datum, **kwargs):
+        """Parse incoming data to a common format"""
+        recording = self.get_recording(datum)
+        meta = self.parse_annotation(datum, **kwargs)
+        meta["recording"] = recording
+        return meta
+
+class RESTRecording(RESTModel, ABC):
+
+    @abstractmethod
+    def get_path(self, datum):
+        """Get path to recording from datum"""
+
+    @abstractmethod
+    def parse_recording(self, datum, **kwargs):
+        """Parse yuntu fields from datum"""
+
+    def parse(self, datum, **kwargs):
+        """Parse incoming data to a common format"""
+        path = self.get_path(datum)
+        meta = self.parse_recording(datum, **kwargs)
+        meta["path"] = path
+        return meta

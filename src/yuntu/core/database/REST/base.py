@@ -3,26 +3,32 @@ from abc import abstractmethod
 
 class RESTManager(ABC):
     """Managet to fetch information on the fly from irekua REST api"""
-    bucket = None
 
     def __init__(self, provider, config):
         self.provider = provider
-        self.api_url = config["api_url"]
-        self.version = config["version"]
-        self.page_size = config["page_size"]
-        self.auth = config["auth"]
-        self.base_filter = config["base_filter"]
-
-        if "bucket" in config:
-            self.bucket = config["bucket"]
-
+        self.init_configs(config)
         self.recordings_url = self.build_recordings_url()
         self.models = self.build_models()
+
+    def init_configs(self, config):
+        self.api_url = config["api_url"]
+        if "version" in config:
+            self.version = config["version"]
+        else:
+            self.version = None
+        self.page_size = config["page_size"]
+
+        if "auth" in config:
+            self.auth = config["auth"]
+        else:
+            self.auth = None
+
+        self.base_filter = config["base_filter"]
 
     @abstractmethod
     def build_recordings_url(self):
         pass
-    
+
     def select(self, query=None, limit=None, offset=None, model="recording", fetch_meta=[]):
         """Query entries from database."""
 

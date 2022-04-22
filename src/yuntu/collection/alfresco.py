@@ -1,31 +1,16 @@
 import pandas as pd
 from yuntu.core.audio.audio import Audio
 from yuntu.collection.base import Collection
-from yuntu.core.database.REST.irekua import IrekuaREST
+from yuntu.core.database.REST.alfresco import AlfrescoREST
 
-class IrekuaRESTCollection(Collection):
+class AlfrescoRESTCollection(Collection):
     """Base class for all collections."""
 
-    db_config = {
-        'provider': 'irekua',
-        'config': {
-            'api_url': 'http://localhost:3000/api/',
-            'version': 'v1',
-            'page_size': 1000,
-            'target_attr': 'results',
-            'auth': 'abc:xyz',
-            'bucket': None,
-            'base_filter': None
-        }
-    }
-
-    db_manager_class = IrekuaREST
+    db_manager_class = AlfrescoREST
 
     def __init__(self, db_config=None):
         """Initialize collection."""
-        if db_config is not None:
-            self.db_config = db_config
-
+        self.db_config = db_config
         self.db_manager = self.get_db_manager()
 
     def __getitem__(self, key):
@@ -72,16 +57,11 @@ class IrekuaRESTCollection(Collection):
             query=None,
             limit=None,
             offset=None,
-            with_metadata=False,
-            fetch_meta=[]):
-        
-        if not with_metadata:
-            fetch_meta = []
+            with_metadata=False):
 
         recordings = self.recordings(query=query,
                                      limit=limit,
-                                     offset=offset,
-                                     fetch_meta=fetch_meta)
+                                     offset=offset)
 
         records = []
         for recording in recordings:
@@ -138,9 +118,9 @@ class IrekuaRESTCollection(Collection):
         """Retrieve annotations from database."""
         pass
 
-    def recordings(self, query=None, limit=None, offset=None, iterate=True, fetch_meta=[]):
+    def recordings(self, query=None, limit=None, offset=None, iterate=True):
         """Retrieve audio objects."""
-        matches = self.db_manager.select(query, limit=limit, offset=offset, model="recording", fetch_meta=fetch_meta)
+        matches = self.db_manager.select(query, limit=limit, offset=offset, model="recording")
         if iterate:
             return matches
         return list(matches)
