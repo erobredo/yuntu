@@ -6,7 +6,7 @@ import datetime
 import math
 
 from yuntu.core.database.REST.base import RESTManager
-from yuntu.core.database.REST.models import RESTRecording
+from yuntu.core.database.REST.models import RESTRecording, RESTAnnotation
 
 MODELS = [
     'recording',
