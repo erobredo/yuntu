@@ -38,8 +38,8 @@ class RESTModel(ABC):
     def auth(self):
         return self._auth
 
-    def fetch_sync(self, url, params=None, auth=None):
-        return self._fmethod(self._http, url, params, auth)
+    def fetch_sync(self, url, params=None, auth=None, headers=None):
+        return self._fmethod(self._http, url, params, auth, headers)
 
     def set_page_size(self, page_size):
         self._page_size = page_size
@@ -67,12 +67,12 @@ class RESTModel(ABC):
                     parsed = self.parse(meta, fetch_meta)
                     yield as_object(parsed)
 
-    def count(self, query=None):
+    def count(self, query=None, **kwargs):
         """Request results count"""
         vquery = self.validate_query(query)
-        return self.result_size(vquery)
+        return self.result_size(vquery, **kwargs)
 
-    def iter_pages(self, query=None, limit=None, offset=None):
+    def iter_pages(self, query=None, limit=None, offset=None, **kwargs):
         vquery = self.validate_query(query)
         rec_count = self.count(query)
 
@@ -84,10 +84,13 @@ class RESTModel(ABC):
         if offset is None:
             offset = 0
 
+        headers = self.build_headers(**kwargs)
+
         for page in range(npages):
             params = self.build_request_params(vquery, limit, offset)
             yield self.fetch_sync(self._http, self.target_url,
-                                  params=params, auth=self.auth)
+                                  params=params, auth=self.auth,
+                                  headers=headers)
 
     def build_request_params(self, query, limit, offset, sortby=None):
         """Use query to build specific HTTP parameters"""
@@ -105,6 +108,10 @@ class RESTModel(ABC):
     def validate_query(self, query):
         """Check if query is valid for REST service"""
 
+    def build_headers(self, **kwargs):
+        """Use query to build specific HTTP parameters"""
+        return None
+
     @abstractmethod
     def build_query_params(self, query):
         """Use query to build specific HTTP parameters"""
@@ -118,7 +125,7 @@ class RESTModel(ABC):
         """Use query to build specific HTTP parameters"""
 
     @abstractmethod
-    def result_size(self, query=None):
+    def result_size(self, query=None, **kwargs):
         """Fetch the number of results in query"""
 
     @abstractmethod

@@ -21,7 +21,7 @@ class AlfrescoMixin:
 
     include = None
 
-    def result_size(self, query=None):
+    def result_size(self, query=None, **kwargs):
         """Fetch the number of results in query"""
         params = {
             "query": {
@@ -33,9 +33,12 @@ class AlfrescoMixin:
             }
         }
 
+        headers = self.build_headers(**kwargs)
+
         return self.fetch_sync(self.target_url,
                                params=params,
-                               auth=self.auth)["list"]["pagination"]["totalItems"]
+                               auth=self.auth,
+                               headers=headers)["list"]["pagination"]["totalItems"]
 
     def validate_query(self, query):
         """Check if query is valid for REST service"""
@@ -72,6 +75,12 @@ class AlfrescoMixin:
             "sort": sortby
         }
 
+    def build_headers(self, **kwargs):
+        """Use query to build specific HTTP parameters"""
+        if self.api_key is None:
+            return None
+        return {"x-api-key": self.api_key}
+
 class AlfrescoAnnotation(AlfrescoMixin, RESTAnnotation):
 
     def get_recording(self, datum):
@@ -105,6 +114,9 @@ class AlfrescoRecording(AlfrescoMixin, RESTRecording):
         params.update({"include": self.include})
 
         return params
+
+    def extract_entries(self, page):
+        return page["list"]["entries"]
 
 class AlfrescoREST(RESTManager):
 
