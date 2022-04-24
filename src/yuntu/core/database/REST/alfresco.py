@@ -121,7 +121,7 @@ class AlfrescoRecording(AlfrescoMixin, RESTRecording):
 class AlfrescoREST(RESTManager):
 
     def init_configs(self, config):
-        super().init_configs()
+        super().init_configs(config)
 
         if "api_key" in config:
             self.api_key = config["api_key"]
