@@ -27,7 +27,8 @@ class AlfrescoMixin:
         """Fetch the number of results in query"""
         params = {
             "query": {
-                "query": query
+                "query": query,
+                "language": "afts"
             },
             "paging": {
                 "maxItems": "1",
@@ -106,6 +107,10 @@ class AlfrescoRecording(AlfrescoMixin, RESTRecording):
                  page_size=1000, auth=None,
                  base_filter=None, api_key=None):
 
+        if not isinstance(base_filter, str):
+            raise ValueError("A base filter must be defined in alfresco collections.")
+
+        base_filter = base_filter + " AND -TYPE: \"dummytype\""
         self.parser = self.load_parser(parser)
         self.api_key = api_key
 

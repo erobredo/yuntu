@@ -24,10 +24,7 @@ class RESTModel(ABC):
         self._auth = auth
         self._page_size = min(page_size, MAX_PAGE_SIZE)
         self._http = http_client()
-        self.base_filter = {}
-
-        if base_filter is not None:
-            self.base_filter = base_filter
+        self.base_filter = base_filter
 
 
     @property
