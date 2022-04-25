@@ -2,7 +2,7 @@ import os
 import json
 from yuntu.core.audio.utils import media_open
 from yuntu.collection.base import Collection, TimedCollection, SpatialCollection, SpatioTemporalCollection
-from yuntu.collection.irekua import AlfrescoRESTCollection
+from yuntu.collection.alfresco import AlfrescoRESTCollection
 
 def collection(col_type="simple", materialized=None, **kwargs):
     if materialized is not None:
