@@ -8,7 +8,7 @@ from dateutil.parser import parse as dateutil_parse
 
 from yuntu.utils import module_object
 from yuntu.core.database.REST.base import RESTManager
-#from yuntu.core.database.REST.models import RESTRecording, RESTAnnotation
+from yuntu.core.database.REST.models import RESTRecording, RESTAnnotation
 
 MODELS = [
     'recording',
