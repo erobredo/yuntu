@@ -29,12 +29,12 @@ class RESTManager(ABC):
     def build_recordings_url(self):
         pass
 
-    def select(self, query=None, limit=None, offset=None, model="recording", fetch_meta=[]):
+    def select(self, query=None, limit=None, offset=None, model="recording"):
         """Query entries from database."""
 
         model_class = self.get_model_class(model)
 
-        return model_class.select(query=query, limit=limit, offset=offset, fetch_meta=fetch_meta)
+        return model_class.select(query=query, limit=limit, offset=offset)
 
     def get_model_class(self, model):
         """Return model class if exists or raise error."""
