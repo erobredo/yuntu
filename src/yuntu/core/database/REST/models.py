@@ -88,7 +88,10 @@ class RESTModel(ABC):
         headers = self.build_headers(**kwargs)
 
         for page in range(npages):
-            params = self.build_request_params(vquery, limit, offset)
+            params = self.build_request_params(vquery,
+                                               self.page_size,
+                                               offset + page*self.page_size)
+
             yield self.fetch_sync(self.target_url,
                                   params=params, auth=self.auth,
                                   headers=headers)
