@@ -1,4 +1,5 @@
 import pandas as pd
+from shapely.geometry import Point
 from yuntu.core.audio.audio import Audio
 from yuntu.collection.base import Collection
 from yuntu.core.database.REST.alfresco import AlfrescoREST
@@ -57,7 +58,9 @@ class AlfrescoRESTCollection(Collection):
             query=None,
             limit=None,
             offset=None,
-            with_metadata=False):
+            with_metadata=False,
+            with_geometry=False,
+            with_annotations=False):
 
         recordings = self.recordings(query=query,
                                      limit=limit,
@@ -71,6 +74,12 @@ class AlfrescoRESTCollection(Collection):
 
             if not with_metadata:
                 data.pop('metadata')
+
+            if with_geometry:
+                data["geometry"] = Point(data["longitude"], data["latitude"])
+
+            if with_annotations:
+                data["annotations"] = []
 
             records.append(data)
 

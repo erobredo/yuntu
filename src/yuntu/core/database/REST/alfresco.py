@@ -1,12 +1,14 @@
 import os
 import json
+import math
+import datetime
+
 from collections import namedtuple
 from dateutil.parser import parse as dateutil_parse
-import datetime
-import math
 
+from yuntu.utils import module_object
 from yuntu.core.database.REST.base import RESTManager
-from yuntu.core.database.REST.models import RESTRecording, RESTAnnotation
+#from yuntu.core.database.REST.models import RESTRecording, RESTAnnotation
 
 MODELS = [
     'recording',
@@ -34,11 +36,12 @@ class AlfrescoMixin:
         }
 
         headers = self.build_headers(**kwargs)
-
-        return self.fetch_sync(self.target_url,
+        res = self.fetch_sync(self.target_url,
                                params=params,
                                auth=self.auth,
                                headers=headers)["list"]["pagination"]["totalItems"]
+
+        return res
 
     def validate_query(self, query):
         """Check if query is valid for REST service"""
@@ -62,6 +65,10 @@ class AlfrescoMixin:
 
     def build_paging_params(self, limit, offset):
         """Use limit and offset to build specific HTTP parameters"""
+        if limit is None:
+            limit = self.page_size
+        if offset is None:
+            offset = 0
         return {
             "paging": {
                 "maxItems": str(limit),
@@ -95,14 +102,19 @@ class AlfrescoAnnotation(AlfrescoMixin, RESTAnnotation):
 class AlfrescoRecording(AlfrescoMixin, RESTRecording):
     include = ["path", "properties"]
 
-    def __init__(self, *args, path_extractor, parser, **kwargs):
-        self.path_extractor = path_extractor
-        self.parser = parser
-        super().__init__(*args,*kwargs)
+    def __init__(self, target_url, parser,
+                 page_size=1000, auth=None,
+                 base_filter=None, api_key=None):
 
-    def get_path(self, datum):
-        """Get path to recording from datum"""
-        return self.path_extractor(datum)
+        self.parser = self.load_parser(parser)
+        self.api_key = api_key
+
+        super().__init__(target_url, page_size, auth, base_filter)
+
+    def load_parser(self, parser):
+        if isinstance(parser, dict):
+            return module_object(parser)
+        return parser
 
     def parse_recording(self, datum):
         """Parse yuntu fields from datum"""
@@ -128,7 +140,6 @@ class AlfrescoREST(RESTManager):
         else:
             self.api_key = None
 
-        self.path_extractor = config["path_extractor"]
         self.recording_parser = config["recording_parser"]
 
     def build_recordings_url(self):
@@ -145,12 +156,10 @@ class AlfrescoREST(RESTManager):
     def build_recording_model(self):
         """Build REST recording model"""
         return AlfrescoRecording(target_url=self.recordings_url,
-                                 target_attr="list",
                                  page_size=self.page_size,
                                  base_filter=self.base_filter,
                                  auth=self.auth,
                                  api_key=self.api_key,
-                                 path_extractor=self.path_extractor,
                                  parser=self.recording_parser)
 
     #def build_annotation_model(self):

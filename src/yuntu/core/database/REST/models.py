@@ -15,11 +15,9 @@ class as_object:
 class RESTModel(ABC):
     """A base class for all REST models"""
 
-    _fmethod = post_sync
-
     def __init__(self, target_url,
                  page_size=1000, auth=None,
-                 base_filter=None):
+                 base_filter=None, **kwargs):
         self.target_url = target_url
         self._auth = auth
         self._page_size = min(page_size, MAX_PAGE_SIZE)
@@ -39,7 +37,8 @@ class RESTModel(ABC):
         return self._auth
 
     def fetch_sync(self, url, params=None, auth=None, headers=None):
-        return self._fmethod(self._http, url, params, auth, headers)
+        """HTTP method for information retrieval"""
+        return post_sync(client=self._http, url=url, params=params, auth=auth, headers=headers)
 
     def set_page_size(self, page_size):
         self._page_size = page_size
@@ -47,7 +46,7 @@ class RESTModel(ABC):
     def set_auth(self, auth):
         self._auth = auth
 
-    def select(self, query=None, limit=None, offset=None, fetch_meta=[]):
+    def select(self, query=None, limit=None, offset=None):
         """Request results and return"""
         # Add limits to request and traverse pages
         if limit is not None:
@@ -57,14 +56,14 @@ class RESTModel(ABC):
                 for meta in meta_arr:
                     if count > limit:
                         break
-                    parsed = self.parse(meta, fetch_meta)
+                    parsed = self.parse(meta)
                     count += 1
                     yield as_object(parsed)
         else:
             for page in self.iter_pages(query, limit, offset):
                 meta_arr = self.extract_entries(page)
                 for meta in meta_arr:
-                    parsed = self.parse(meta, fetch_meta)
+                    parsed = self.parse(meta)
                     yield as_object(parsed)
 
     def count(self, query=None, **kwargs):
@@ -88,7 +87,7 @@ class RESTModel(ABC):
 
         for page in range(npages):
             params = self.build_request_params(vquery, limit, offset)
-            yield self.fetch_sync(self._http, self.target_url,
+            yield self.fetch_sync(self.target_url,
                                   params=params, auth=self.auth,
                                   headers=headers)
 
@@ -153,16 +152,10 @@ class RESTAnnotation(RESTModel, ABC):
 class RESTRecording(RESTModel, ABC):
 
     @abstractmethod
-    def get_path(self, datum):
-        """Get path to recording from datum"""
-
-    @abstractmethod
     def parse_recording(self, datum, **kwargs):
         """Parse yuntu fields from datum"""
 
     def parse(self, datum, **kwargs):
         """Parse incoming data to a common format"""
-        path = self.get_path(datum)
         meta = self.parse_recording(datum, **kwargs)
-        meta["path"] = path
         return meta
