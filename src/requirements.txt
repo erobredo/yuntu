@@ -34,13 +34,14 @@ pickle-mixin==1.0.2
 Pillow==7.1.1
 pony==0.7.13
 psutil==5.7.0
-pyarrow>=3.0.0
+pyarrow==0.9.0
 psycopg2==2.8.6
 pycparser==2.20
 pygraphviz==1.5
 pymongo==3.10.1
 pyparsing>=2.4.7,<=3.0.0a1
 python-dateutil==2.8.1
+python-dotenv==0.19.2
 pytz==2019.3
 PyWavelets==1.1.1
 PyYAML==5.3.1
