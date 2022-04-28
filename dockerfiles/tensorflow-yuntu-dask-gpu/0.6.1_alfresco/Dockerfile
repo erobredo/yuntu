@@ -5,7 +5,7 @@ ENV TIMEZONE America/Mexico_City
 ENV LANG C.UTF-8
 ENV LC_ALL C.UTF-8
 ENV DEBIAN_FRONTEND noninteractive
-ENV DEB_BUILD_DEPS="sudo nano less git wget curl python3-dev python3-pip python3-setuptools iptables ffmpeg libsndfile1 libpq-dev libsndfile1-dev python3-soundfile python-soundfile gcc graphviz graphviz-dev"
+ENV DEB_BUILD_DEPS="sudo nano less git wget curl python3-dev python3-pip python3-setuptools ffmpeg libsndfile1 libpq-dev libsndfile1-dev python3-soundfile python-soundfile gcc graphviz graphviz-dev"
 ENV DEB_PACKAGES=""
 ENV PIP_PACKAGES_COMMON="pytest python-dotenv==0.19.2"
 ENV JUPYTERLAB="jupyter-client==5.3.4 jupyterlab==2.3.2 qtconsole==5.2.1 nbconvert==5.6.1 jupyter-console==6.4.0 ipykernel==6.6.0 MarkupSafe==2.0.1"
