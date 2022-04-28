@@ -10,8 +10,7 @@ ENV DEB_PACKAGES=""
 ENV PIP_PACKAGES_COMMON="pytest python-dotenv==0.19.2"
 ENV JUPYTERLAB="jupyter-client==5.3.4 jupyterlab==2.3.2 qtconsole==5.2.1 nbconvert==5.6.1 jupyter-console==6.4.0 ipykernel==6.6.0 MarkupSafe==2.0.1"
 ENV PIP_PACKAGES_KALE="kubeflow-kale==0.6.1"
-RUN apt-get update && export $DEBIAN_FRONTEND && \
-    echo $TIMEZONE > /etc/timezone && apt-get install -y tzdata
+
 RUN apt-get update && apt-get install -y $DEB_BUILD_DEPS $DEB_PACKAGES && pip install --upgrade pip  
 
 # Install nodejs deps
