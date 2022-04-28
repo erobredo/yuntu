@@ -1,5 +1,7 @@
 """Audio dataframe base classes"""
 import os
+import datetime
+import numpy as np
 import pandas as pd
 from dask import delayed
 import dask.dataframe.extensions
@@ -29,6 +31,18 @@ OPTIONAL_AUDIO_COLUMNS = [
     METADATA,
     ID,
 ]
+
+SINGLE_COUNTER = lambda x: x+1
+BOOLEAN_COUNTER = lambda x: np.maximum(x, np.ones_like(x))
+DEFAULT_COUNTER = SINGLE_COUNTER
+
+def to_calendar(row):
+    id = row.id
+    abs_start_time = row.time_utc
+    abs_end_time = abs_start_time + datetime.timedelta(seconds=row.duration)
+    return pd.Series({'id': id,
+                      'abs_start_time': abs_start_time,
+                      'abs_end_time': abs_end_time})
 
 
 @pd.api.extensions.register_dataframe_accessor("audio")
@@ -207,6 +221,47 @@ class AudioAccessor:
 
             return df.apply(lambda row: parse_json(row, ["labels", "metadata"]), axis=1)
         return pipeline["matches"].future(client=client, feed={"npartitions": npartitions})
+
+    def get_coverage(self, count_func=DEFAULT_COUNTER, time_unit=60, time_module=None, min_t=None, max_t=None):
+        df = self._obj.apply(to_calendar, axis=1)
+
+        if min_t is None:
+            min_t = pd.to_datetime(df.abs_start_time.min(), utc=True)
+        if max_t is None:
+            max_t = pd.to_datetime(df.abs_end_time.max(), utc=True)
+
+        if min_t >= max_t:
+            raise ValueError("Wrong time range. Try a more accurate specification.")
+
+        in_range = df[(pd.to_datetime(df.abs_start_time, utc=True) >= min_t) & (pd.to_datetime(df.abs_end_time, utc=True) <= max_t)]
+
+        total_time = datetime.timedelta.total_seconds(max_t - min_t)
+        if time_module is not None:
+            module = datetime.timedelta(seconds=time_unit*time_module)
+            nframes = time_module
+        else:
+            module = None
+            nframes = int(np.round(total_time/time_unit))
+            if nframes == 0 and not in_range.empty:
+                nframes = 1
+
+        coverage = {}
+        sampling = np.zeros([nframes])
+        for abs_start_time, abs_end_time in in_range[["abs_start_time", "abs_end_time"]].values:
+            if time_module is None:
+                start = int(np.round(float(datetime.timedelta.total_seconds(pd.to_datetime(abs_start_time, utc=True) - min_t))/time_unit))
+                stop = max(start, int(np.round(float(datetime.timedelta.total_seconds(pd.to_datetime(abs_end_time, utc=True) - min_t))/time_unit)))
+                sampling[start:stop+1] = count_func(sampling[start:stop+1])
+            else:
+                remainder = (pd.to_datetime(abs_start_time, utc=True) - min_t.astimezone("utc")) % module
+                index = np.int64(int(round((remainder/time_unit).total_seconds())) % time_module)
+                sampling[index] = count_func(sampling[index])
+
+        coverage["count"] = sampling
+        coverage["abs_start_time"] = [min_t.astimezone("utc") + datetime.timedelta(seconds=i*time_unit) for i in range(nframes)]
+        coverage["abs_end_time"] = [min_t.astimezone("utc") + datetime.timedelta(seconds=(i+1)*time_unit) for i in range(nframes)]
+
+        return pd.DataFrame(coverage)[["abs_start_time", "abs_end_time", "count"]]
 
     def get_soundscape(self, name="get_soundscape", work_dir="/tmp", persist=True,
                        read=False, npartitions=1, client=None, show_progress=True,
