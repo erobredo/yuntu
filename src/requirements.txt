@@ -28,13 +28,13 @@ networkx==2.4
 numba==0.46.0
 numpy>=1.18.1,<=1.19.5
 packaging==20.3
-pandas==1.0.3
+pandas>=1.1.0
 partd==1.1.0
 pickle-mixin==1.0.2
 Pillow==7.1.1
 pony==0.7.13
 psutil==5.7.0
-pyarrow==0.9.0
+pyarrow>=3.0,<7.0
 psycopg2==2.8.6
 pycparser==2.20
 pygraphviz==1.5
