@@ -7,7 +7,8 @@ ENV LC_ALL C.UTF-8
 ENV DEBIAN_FRONTEND noninteractive
 ENV DEB_BUILD_DEPS="sudo nano less git wget curl python3-dev python3-pip python3-setuptools iptables ffmpeg libsndfile1 libpq-dev libsndfile1-dev python3-soundfile python-soundfile gcc graphviz graphviz-dev"
 ENV DEB_PACKAGES="ca-certificates"
-ENV PIP_PACKAGES_COMMON="pytest"
+ENV PIP_PACKAGES_COMMON="pytest python-dotenv==0.19.2"
+ENV JUPYTERLAB="jupyter-client==5.3.4 jupyterlab==2.3.2 qtconsole==5.2.1 nbconvert==5.6.1 jupyter-console==6.4.0 ipykernel==6.6.0 MarkupSafe==2.0.1"
 ENV PIP_PACKAGES_KALE="kubeflow-kale==0.6.1"
 RUN apt-get update && export $DEBIAN_FRONTEND && \
     echo $TIMEZONE > /etc/timezone && apt-get install -y tzdata
@@ -16,8 +17,7 @@ RUN apt-get update && apt-get install -y $DEB_BUILD_DEPS $DEB_PACKAGES && pip in
 # Install nodejs deps
 RUN curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - && apt-get install -y nodejs
 
-#Install jupyter
-RUN pip3 install jupyter "jupyterlab>=2.0.0,<3.0.0" --upgrade
+RUN pip3 install $JUPYTERLAB
 
 # Assign jupyter password
 RUN jupyter notebook --generate-config && \
@@ -37,7 +37,7 @@ RUN python3 -m pip install sidekit guano timezonefinder s3fs "tensorflow_probabi
 #from statement installs 2.1.0, next line upgrade to specific version
 RUN pip3 install --upgrade tensorflow-gpu==2.3.0
 
-#RUN pip install $PIP_PACKAGES_COMMON
+RUN pip install $PIP_PACKAGES_COMMON
 
 #kale installation
 RUN pip install $PIP_PACKAGES_KALE
