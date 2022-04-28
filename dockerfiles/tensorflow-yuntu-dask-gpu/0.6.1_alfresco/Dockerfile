@@ -3,6 +3,13 @@ FROM sipecam/audio-dgpi-kale-tensorflow-yuntu-dask-gpu-cert:0.6.1_dev
 ENV PIP_PACKAGES_COMMON="python-dotenv==0.19.2"
 RUN pip install $PIP_PACKAGES_COMMON
 
+# Install yuntu from git with deps
+RUN mkdir -p /extra_code
+RUN cd /extra_code
+ADD . /extra_code/yuntu-private
+RUN cd /extra_code/yuntu-private/src && \
+    python3 setup.py install
+
 VOLUME ["/shared_volume"]
 ENV NB_PREFIX audio_dgpi
 WORKDIR /
