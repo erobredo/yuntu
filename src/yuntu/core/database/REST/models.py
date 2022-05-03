@@ -19,11 +19,14 @@ class RESTModel(ABC):
 
     def __init__(self, target_url,
                  page_size=1000, auth=None,
-                 base_filter=None, **kwargs):
+                 base_filter=None, retry=10,
+                 timeout=30, force_responses=(504,) **kwargs):
         self.target_url = target_url
         self._auth = auth
         self._page_size = min(page_size, MAX_PAGE_SIZE)
-        self._http = http_client()
+        self._http = http_client(retry=retry,
+                                 timeout=timeout,
+                                 forcelist=force_responses)
         self.base_filter = base_filter
 
 

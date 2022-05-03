@@ -105,7 +105,8 @@ class AlfrescoRecording(AlfrescoMixin, RESTRecording):
 
     def __init__(self, target_url, parser,
                  page_size=1000, auth=None,
-                 base_filter=None, api_key=None):
+                 base_filter=None, api_key=None,
+                 retry=10, timeout=30, force_responses=(504,)):
 
         if not isinstance(base_filter, str):
             raise ValueError("A base filter must be defined in alfresco collections.")
@@ -114,7 +115,9 @@ class AlfrescoRecording(AlfrescoMixin, RESTRecording):
         self.parser = self.load_parser(parser)
         self.api_key = api_key
 
-        super().__init__(target_url, page_size, auth, base_filter)
+        super().__init__(target_url=target_url, page_size=page_size,
+                         auth=auth, base_filter=base_filter, retry=retry,
+                         timeout=timeout, force_responses=force_responses)
 
     def load_parser(self, parser):
         if isinstance(parser, dict):

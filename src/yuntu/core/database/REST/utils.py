@@ -1,8 +1,11 @@
 import json
 import urllib3
 
-def http_client():
-    return urllib3.PoolManager()
+def http_client(timeout=30.0, retry=10, forcelist=(504, )):
+    rtimeout = urllib3.util.Timeout(total=timeout)
+    retries = urllib3.util.Retry(total=retry, status_forcelist=forcelist)
+
+    return urllib3.PoolManager(retries=retries, timeout=rtimeout)
 
 def get_sync(client, url, params=None, auth=None, headers=None):
 
