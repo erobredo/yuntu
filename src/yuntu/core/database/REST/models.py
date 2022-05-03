@@ -20,7 +20,8 @@ class RESTModel(ABC):
     def __init__(self, target_url,
                  page_size=1000, auth=None,
                  base_filter=None, retry=10,
-                 timeout=30, force_responses=(504,) **kwargs):
+                 timeout=30, force_responses=(504,),
+                 **kwargs):
         self.target_url = target_url
         self._auth = auth
         self._page_size = min(page_size, MAX_PAGE_SIZE)
