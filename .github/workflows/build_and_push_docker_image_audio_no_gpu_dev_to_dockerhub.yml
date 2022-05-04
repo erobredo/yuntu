@@ -5,7 +5,7 @@ name: audio-tensorflow-yuntu-dask-no-gpu-docker-image-dev-build-and-push
 # events but only for the dev branch
 on:
   push:
-    branches: [ dev ]
+    branches: [ alfresco ]
     paths:
     - dockerfiles/tensorflow-yuntu-dask/0.6.1_dev/Dockerfile
 
