@@ -24,8 +24,10 @@ RUN jupyter notebook --generate-config && \
     sed -i "s/#c.NotebookApp.password = .*/c.NotebookApp.password = u'sha1:9361dd216701:df4736638013cd671a09ef12a671195e8fc61505'/" ~/.jupyter/jupyter_notebook_config.py && \
     sed -i "s/#c.NotebookApp.certfile = .*/c.NotebookApp.certfile = u'\/shared_volume\/certs\/cert.pem'/" ~/.jupyter/jupyter_notebook_config.py && \
     sed -i "s/#c.NotebookApp.keyfile = .*/c.NotebookApp.keyfile = u'\/shared_volume\/certs\/privkey.key'/" ~/.jupyter/jupyter_notebook_config.py
-# Install dask-cuda
-RUN python3 -m pip install dask-cuda==0.20.0a210416
+
+# Install Cython
+RUN python3 -m pip install Cython
+
 # Install yuntu from git with deps
 RUN mkdir -p /extra_code
 RUN cd /extra_code
@@ -35,7 +37,7 @@ RUN cd /extra_code/yuntu-private/src && \
 
 RUN python3 -m pip install sidekit guano timezonefinder s3fs "tensorflow_probability<=0.11.1"    
 #from statement installs 2.1.0, next line upgrade to specific version
-RUN pip3 install --upgrade tensorflow-gpu==2.3.0
+RUN pip3 install --upgrade tensorflow-cpu==2.3.0
 
 #RUN pip install $PIP_PACKAGES_COMMON
 
