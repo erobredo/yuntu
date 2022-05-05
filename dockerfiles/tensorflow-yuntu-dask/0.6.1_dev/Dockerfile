@@ -37,7 +37,7 @@ RUN cd /extra_code/yuntu-private/src && \
 
 RUN python3 -m pip install sidekit guano timezonefinder s3fs "tensorflow_probability<=0.11.1"    
 #from statement installs 2.1.0, next line upgrade to specific version
-RUN pip3 install --upgrade tensorflow-cpu==2.3.0rc2
+# RUN pip3 install --upgrade tensorflow-cpu==2.3.0
 
 #RUN pip install $PIP_PACKAGES_COMMON
 
