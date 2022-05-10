@@ -151,7 +151,7 @@ class AlfrescoREST(RESTManager):
         self.recording_parser = config["recording_parser"]
 
     def build_recordings_url(self):
-        return f"{self.api_url}/alfresco/search/"
+        return f"{self.api_url}/search/"
 
     def build_models(self):
         """Construct all database entities."""
