@@ -59,6 +59,7 @@ def label_to_hz(x, pos):
 class Spectrogram(TimeFrequencyFeature):
     """Spectrogram class."""
     plot_title = 'Amplitude Spectrogram'
+    _default_cmap = 'gray'
 
     def __init__(
             self,
@@ -191,14 +192,23 @@ class Spectrogram(TimeFrequencyFeature):
 
         result = self.transform(array)
 
-        if self._has_trivial_window():
-            return result
-
         max_index = self.get_index_from_frequency(self._get_max())
         min_index = self.get_index_from_frequency(self._get_min())
 
         start_index = self.get_index_from_time(self._get_start())
         end_index = self.get_index_from_time(self._get_end())
+
+        cut_x = False
+        cut_y = False
+
+        if start_index != 0 or end_index != result.shape[1]:
+            cut_x = True
+
+        if min_index != 0 or max_index != result.shape[0]:
+            cut_y = True
+
+        if self._has_trivial_window() and not (cut_y or cut_x):
+            return result
 
         slices = (
             slice(min_index, max_index),
@@ -278,7 +288,7 @@ class Spectrogram(TimeFrequencyFeature):
             spectrogram,
             vmin=vmin,
             vmax=vmax,
-            cmap=kwargs.get('cmap', 'gray'),
+            cmap=kwargs.get('cmap', self._default_cmap),
             alpha=kwargs.get('alpha', 1.0),
             shading=kwargs.get('shading', 'auto'))
 
@@ -310,9 +320,9 @@ class Spectrogram(TimeFrequencyFeature):
     def db(
             self,
             lazy: Optional[bool] = False,
-            ref: Optional[float] = None,
-            amin: Optional[float] = None,
-            top_db: Optional[float] = None):
+            ref: Optional[float] = 1.0,
+            amin: Optional[float] = 1e-05,
+            top_db: Optional[float] = 80.0):
         """Get decibel spectrogram from spec."""
         kwargs = {
             'ref': ref,
@@ -334,8 +344,9 @@ class Spectrogram(TimeFrequencyFeature):
             max_freq = self.window.max
             sr = 2*(self.time_axis.resolution * self.hop_length // 2)
             n_mels = (1 + self.n_fft // 2)//4
-            kwargs['array'] = melspectrogram(S=self.array**2, sr=sr,
-                                             fmax=max_freq, n_mels=n_mels)
+            kwargs['array'] = melspectrogram(S=self.array**2,
+                                             sr=sr,
+                                             n_mels=n_mels)
 
         return MelSpectrogram(**kwargs)
 
@@ -387,9 +398,9 @@ class PowerSpectrogram(Spectrogram):
     def db(
             self,
             lazy: Optional[bool] = False,
-            ref: Optional[float] = None,
-            amin: Optional[float] = None,
-            top_db: Optional[float] = None):
+            ref: Optional[float] = 1.0,
+            amin: Optional[float] = 1e-05,
+            top_db: Optional[float] = 80.0):
         """Get decibel spectrogram from power spec."""
         kwargs = self.to_dict()
         kwargs['annotations'] = self.annotations
@@ -408,7 +419,10 @@ class PowerSpectrogram(Spectrogram):
             kwargs['audio'] = self.audio
 
         if not self.is_empty() or not lazy:
-            kwargs['array'] = power_to_db(self.array)
+            kwargs['array'] = power_to_db(self.array,
+                                          ref=kwargs["ref"],
+                                          amin=kwargs["amin"],
+                                          top_db=kwargs['top_db'])
 
         return DecibelSpectrogram(**kwargs)
 
@@ -520,7 +534,7 @@ class MelSpectrogram(Spectrogram):
         """Apply transformation to array"""
         power_spectrogram = super().transform(array)**2
         max_freq = self.window.max
-        return melspectrogram(S=power_spectrogram, sr=self.sr, fmax=max_freq, n_mels=self.n_mels)
+        return melspectrogram(S=power_spectrogram, sr=self.sr, n_mels=self.n_mels)
 
     @property
     def spectrum_values(self):
@@ -537,9 +551,9 @@ class MelSpectrogram(Spectrogram):
     def db(
             self,
             lazy: Optional[bool] = False,
-            ref: Optional[float] = None,
-            amin: Optional[float] = None,
-            top_db: Optional[float] = None):
+            ref: Optional[float] = 1.0,
+            amin: Optional[float] = 1e-05,
+            top_db: Optional[float] = 80.0):
         """Get decibel spectrogram from power spec."""
         kwargs = self.to_dict()
         kwargs['annotations'] = self.annotations
@@ -558,8 +572,10 @@ class MelSpectrogram(Spectrogram):
             kwargs['audio'] = self.audio
 
         if not self.is_empty() or not lazy:
-            kwargs['array'] = power_to_db(self.array)
-
+            kwargs['array'] = power_to_db(self.array,
+                                          ref=kwargs["ref"],
+                                          amin=kwargs["amin"],
+                                          top_db=kwargs['top_db'])
         return DecibelMelSpectrogram(**kwargs)
 
     def plot(self, ax=None, **kwargs):
