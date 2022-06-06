@@ -48,7 +48,7 @@ class FrequencyMediaMixin:
                 resolution=resolution,
                 **kwargs)
 
-        if not isinstance(frequency_axis, self.frequency_axis_class):
+        if isinstance(frequency_axis, dict):
             frequency_axis = self.frequency_axis_class.from_dict(frequency_axis)  # noqa
 
         self.frequency_axis = frequency_axis
@@ -376,17 +376,18 @@ class FrequencyMediaMixin:
         }
 
     def _has_trivial_window(self):
-        if self.window.min is not None:
-            min_freq = self._get_min()
+        if isinstance(self.window, windows.FrequencyWindow):
+            if self.window.min is not None:
+                min_freq = self._get_min()
 
-            if min_freq != self.window.min:
-                return False
+                if min_freq != self.window.min:
+                    return False
 
-        if self.window.max is not None:
-            max_freq = self._get_max()
+            if self.window.max is not None:
+                max_freq = self._get_max()
 
-            if max_freq != self.window.max:
-                return False
+                if max_freq != self.window.max:
+                    return False
 
         return super()._has_trivial_window()
 

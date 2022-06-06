@@ -60,7 +60,7 @@ class TimeFrequencyMediaMixin(TimeMediaMixin, FrequencyMediaMixin):
             frequency_axis = self.frequency_axis_class(
                 resolution=freq_resolution)
 
-        if not isinstance(frequency_axis, self.frequency_axis_class):
+        if isinstance(frequency_axis, dict):
             frequency_axis = self.frequency_axis_class.from_dict(frequency_axis) # noqa
 
         if window is None:
@@ -69,9 +69,10 @@ class TimeFrequencyMediaMixin(TimeMediaMixin, FrequencyMediaMixin):
                 end=duration,
                 min=min_freq,
                 max=max_freq)
+        elif isinstance(window, dict):
+            window = windows.Window.from_dict(window)
 
         if not isinstance(window, windows.TimeFrequencyWindow):
-
             if isinstance(window, windows.TimeWindow):
                 window = windows.TimeFrequencyWindow(
                     start=window.start,

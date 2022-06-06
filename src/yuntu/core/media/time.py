@@ -380,17 +380,18 @@ class TimeMediaMixin:
         }
 
     def _has_trivial_window(self):
-        if self.window.start is not None:
-            start = self._get_start()
+        if isinstance(self.window, windows.TimeWindow):
+            if self.window.start is not None:
+                start = self._get_start()
 
-            if start != self.window.start:
-                return False
+                if start != self.window.start:
+                    return False
 
-        if self.window.end is not None:
-            end = self._get_end()
+            if self.window.end is not None:
+                end = self._get_end()
 
-            if end != self.window.end:
-                return False
+                if end != self.window.end:
+                    return False
 
         return super()._has_trivial_window()
 

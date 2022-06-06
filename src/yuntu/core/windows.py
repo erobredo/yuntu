@@ -47,15 +47,16 @@ class Window(ABC):
         if 'type' not in data:
             raise ValueError('Window data does not have a type.')
 
-        window_type = data.pop('type')
+        window_dict = dict(data)
+        window_type = window_dict.pop('type')
         if window_type == 'TimeWindow':
-            return TimeWindow(**data)
+            return TimeWindow(**window_dict)
 
         if window_type == 'FrequencyWindow':
-            return FrequencyWindow(**data)
+            return FrequencyWindow(**window_dict)
 
         if window_type == 'TimeFrequencyWindow':
-            return TimeFrequencyWindow(**data)
+            return TimeFrequencyWindow(**window_dict)
 
         message = (
             f'Window type {window_type} is incorrect. Valid options: '
@@ -313,7 +314,7 @@ class TimeFrequencyWindow(TimeWindow, FrequencyWindow):
         return TimeFrequencyWindow(min=min, max=max, start=start, end=end)
 
     def plot(self, ax=None, **kwargs):
-        """Plot frequency window."""
+        """Plot time-frequency window."""
         import matplotlib.pyplot as plt
 
         if ax is None:
