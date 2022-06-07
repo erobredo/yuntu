@@ -220,6 +220,7 @@ class AudioAccessor:
                                                  feed={"npartitions": npartitions})
 
             return df.apply(lambda row: parse_json(row, ["labels", "metadata"]), axis=1)
+
         return pipeline["matches"].future(client=client, feed={"npartitions": npartitions})
 
     def get_coverage(self, count_func=DEFAULT_COUNTER, time_unit=60, time_module=None, min_t=None, max_t=None):

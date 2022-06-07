@@ -2,9 +2,10 @@
 import numpy as np
 from skimage.feature import peak_local_max, match_template
 from shapely.ops import unary_union
+
 from yuntu.core.geometry import BBox, Polygon, FrequencyInterval
 from yuntu.core.annotation.annotation import Annotation
-
+from yuntu.core.audio.features.spectrogram import Spectrogram
 from yuntu.soundscape.processors.probes.base import TemplateProbe
 
 class CrossCorrelationProbe(TemplateProbe):
@@ -30,7 +31,10 @@ class CrossCorrelationProbe(TemplateProbe):
     def set_template(self, molds):
         """Set probe's template."""
         for m in molds:
-            self.add_mold(m)
+            if isinstance(m, dict):
+                self.add_mold(Spectrogram.from_dict(m))
+            else:
+                self.add_mold(m)
 
     def add_mold(self, mold):
         """Append a new mold to template.
