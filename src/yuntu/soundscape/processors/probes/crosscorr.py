@@ -12,7 +12,7 @@ class CrossCorrelationProbe(TemplateProbe):
     """A probe that uses cross correaltion to match inputs with templates."""
     name = "Correlation probe"
 
-    def __init__(self, molds, tag="target"):
+    def __init__(self, molds, feature={"type": "spectrogram", "config": {}}, tag="target"):
         if not isinstance(molds, (tuple, list)):
             raise ValueError("Argument 'mold' must be a list of "
                              "time/frequency media.")
@@ -21,6 +21,7 @@ class CrossCorrelationProbe(TemplateProbe):
         self.tag = tag
         self._template = []
         self._frequency_interval = None
+        self.feature = feature
         self.set_template(molds)
 
     @property
@@ -81,7 +82,14 @@ class CrossCorrelationProbe(TemplateProbe):
             results.append(corr)
         return np.array(results)
 
+    def transform_target(self, target):
+        spec = getattr(target.features,
+                       self.feature["type"])(**self.feature["config"])
+        return spec
+
     def apply(self, target, thresh=0.5, method='mean', peak_distance=10, limit_freqs=True):
+        target = self.transform_target(target)
+
         if not isinstance(limit_freqs, FrequencyInterval):
             if limit_freqs:
                 limit_freqs = self.frequency_interval
@@ -92,6 +100,7 @@ class CrossCorrelationProbe(TemplateProbe):
         if limit_freqs:
             target = target.cut(min_freq=limit_freqs.min_freq,
                                 max_freq=limit_freqs.max_freq)
+
         corr = self.corr(target, method=method)
 
         all_peaks = peak_local_max(corr,

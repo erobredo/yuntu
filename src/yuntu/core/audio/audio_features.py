@@ -17,6 +17,7 @@ class AudioFeatures:
     power_spectrogram_class = spectrogram.PowerSpectrogram
     db_spectrogram_class = spectrogram.DecibelSpectrogram
     mel_spectrogram_class = spectrogram.MelSpectrogram
+    db_mel_spectrogram_class = spectrogram.DecibelMelSpectrogram
 
     def __init__(self, audio):
         """Construct the Audio Feature object."""
@@ -158,6 +159,50 @@ class AudioFeatures:
             kwargs['max_freq'] = max_freq
 
         return self.mel_spectrogram_class(audio=self.audio, **kwargs)
+
+    def db_mel_spectrogram(
+            self,
+            n_fft: Optional[int] = None,
+            hop_length: Optional[int] = None,
+            window_function: Optional[str] = None,
+            lazy: Optional[bool] = False,
+            ref: Optional[float] = None,
+            amin: Optional[float] = None,
+            top_db: Optional[float] = None,
+            max_freq: Optional[float] = None,
+            n_mels: Optional[int] = None,
+            sr: Optional[int] = None):
+        """Get power spectrogram."""
+        kwargs = self.get_base_kwargs()
+        kwargs['lazy'] = lazy
+        if n_fft is not None:
+            kwargs['n_fft'] = n_fft
+
+        if hop_length is not None:
+            kwargs['hop_length'] = hop_length
+
+        if window_function is not None:
+            kwargs['window_function'] = window_function
+
+        if n_mels is not None:
+            kwargs['n_mels'] = n_mels
+
+        if sr is not None:
+            kwargs['sr'] = sr
+
+        if ref is not None:
+            kwargs['ref'] = ref
+
+        if amin is not None:
+            kwargs['amin'] = amin
+
+        if top_db is not None:
+            kwargs['top_db'] = top_db
+
+        if max_freq is not None:
+            kwargs['max_freq'] = max_freq
+
+        return self.db_mel_spectrogram_class(audio=self.audio, **kwargs)
 
     def zcr(
             self,
