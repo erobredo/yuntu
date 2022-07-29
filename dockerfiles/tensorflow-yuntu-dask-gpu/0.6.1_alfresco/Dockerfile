@@ -1,6 +1,6 @@
 #dummy line to trigger build
 FROM sipecam/audio-dgpi-kale-tensorflow-yuntu-dask-gpu-cert:0.6.1_dev
-ENV PIP_PACKAGES_COMMON="python-dotenv==0.19.2"
+ENV PIP_PACKAGES_COMMON="python-dotenv==0.19.2 geojson"
 RUN pip install $PIP_PACKAGES_COMMON
 
 # Install yuntu from git with deps
