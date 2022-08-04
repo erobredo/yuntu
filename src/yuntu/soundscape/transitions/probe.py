@@ -64,6 +64,7 @@ def probe_all(recording_rows, probe_config):
         annotate_args = {}
 
     all_annotations = []
+    count = 0
     with probe_class(**probe_kwargs) as probe:
         for row in recording_rows:
             rid = row["id"]
@@ -94,6 +95,9 @@ def probe_all(recording_rows, probe_config):
                 annotations[i]["metadata"] = json.dumps(annotations[i]["metadata"])
                 all_annotations.append(annotations[i])
 
+            count += 1
+            if count % 10 == 0:
+                gc.collect()
 
     return all_annotations
 
