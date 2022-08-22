@@ -217,11 +217,11 @@ def probe_annotate(partitions, probe_config, col_config):
 
 
 @transition(name="probe_recordings", outputs=["matches"], persist=True,
-            signature=((DynamicPlace, DictPlace), (DaskDataFramePlace,)))
-def probe_recordings(recordings_bag, probe_config):
+            signature=((DynamicPlace, DictPlace, ScalarPlace), (DaskDataFramePlace,)))
+def probe_recordings(recordings_bag, probe_config, id_type='int'):
     """Run probe and annotate bag of recording rows."""
 
-    meta = [('recording', np.dtype('int')),
+    meta = [('recording', np.dtype(id_type)),
             ('start_time', np.dtype('float64')),
             ('end_time', np.dtype('float64')),
             ('min_freq', np.dtype('float64')),
