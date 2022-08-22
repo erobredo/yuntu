@@ -31,5 +31,9 @@ class ProbeDataframe(Pipeline):
         self["probe_config"] = place(self.probe_config, 'dict', 'probe_config')
         self['recordings_bag'] = bag_dataframe(self['recordings'],
                                                self['npartitions'])
+        self['id_type'] = place(data=self.recordings.dtypes.id.str,
+                                name='id_type',
+                                ptype='scalar')
         self["matches"] = probe_recordings(self["recordings_bag"],
-                                           self["probe_config"])
+                                           self["probe_config"],
+                                           self["id_type"])
