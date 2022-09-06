@@ -29,7 +29,6 @@ else:
                         'psycopg2',
                         'pony',
                         'dill',
-                        'pickle-mixin',
                         'matplotlib',
                         'librosa',
                         'scikit-image',
@@ -41,6 +40,8 @@ else:
                         'pyarrow',
                         'pygraphviz',
                         'pymongo']
+    if sys.version[:3] == '3.7':
+        install_requires.append('pickle-mixin')
 # allow setup.py to be run from any path
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
