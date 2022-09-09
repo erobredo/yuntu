@@ -31,7 +31,7 @@ else:
                         'dill',
                         'matplotlib',
                         'librosa',
-                        'scikit-image',
+                        'scikit-image<0.17'
                         'shapely',
                         'requests',
                         'tqdm',
