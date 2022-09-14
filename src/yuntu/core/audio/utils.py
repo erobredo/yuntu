@@ -147,8 +147,9 @@ def read_media(path,
                duration=None,
                **kwargs):
     """Read media."""
-    if path[:5] == "s3://":
-        path = media_open_s3(path)
+    if isinstance(path, str):
+        if path[:5] == "s3://":
+            path = media_open_s3(path)
     return librosa.load(path,
                         sr=samplerate,
                         offset=offset,
