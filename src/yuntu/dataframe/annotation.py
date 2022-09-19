@@ -70,6 +70,8 @@ def disolve_annotations(group, key, radius, join_meta_func=None, keep_radius=Tru
     geoms = ref_geometries
     if isinstance(geoms, Polygon):
         geoms = [geoms]
+    else:
+        geoms = geoms.geoms
 
     for geom in geoms:
         row = {}
