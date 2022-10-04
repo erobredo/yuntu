@@ -36,10 +36,26 @@ yuntu.datastore.irekua module
    :undoc-members:
    :show-inheritance:
 
+yuntu.datastore.mongodb module
+------------------------------
+
+.. automodule:: yuntu.datastore.mongodb
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 yuntu.datastore.postgresql module
 ---------------------------------
 
 .. automodule:: yuntu.datastore.postgresql
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+yuntu.datastore.wamd module
+---------------------------
+
+.. automodule:: yuntu.datastore.wamd
    :members:
    :undoc-members:
    :show-inheritance:

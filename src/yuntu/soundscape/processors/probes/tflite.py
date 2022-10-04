@@ -12,7 +12,7 @@ except:
     from tensorflow import lite as tflite
 
 class TFLiteModelProbe(ModelProbe, ABC):
-    """A model probe that uses keras."""
+    """A model probe that uses tflite as interpreter."""
     def __init__(self, model_path):
         self._model = None
         self.model_path = model_path
@@ -20,6 +20,22 @@ class TFLiteModelProbe(ModelProbe, ABC):
         self._output_indices = None
 
     def get_output(self, inputs, output_indices=[0]):
+        """Get model output by index.
+
+        Parameters
+        ----------
+        inputs : list
+            A list of dictionaries that specify a value and a type for each
+            input.
+        output_indices : list
+            An array of output indices to return.
+
+        Returns
+        -------
+        predictions : list
+            A list of output predictions, one for each specified output.
+
+        """
         for i in range(len(inputs)):
             self.model.set_tensor(self._input_indices[i], np.array(inputs[i]["value"], dtype=inputs[i]["dtype"]))
         self.model.invoke()

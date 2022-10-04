@@ -45,6 +45,30 @@ yuntu.core.database.recordings module
    :undoc-members:
    :show-inheritance:
 
+yuntu.core.database.spatial module
+----------------------------------
+
+.. automodule:: yuntu.core.database.spatial
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+yuntu.core.database.spatiotemporal module
+-----------------------------------------
+
+.. automodule:: yuntu.core.database.spatiotemporal
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+yuntu.core.database.timed module
+--------------------------------
+
+.. automodule:: yuntu.core.database.timed
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

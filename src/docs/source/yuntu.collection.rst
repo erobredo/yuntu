@@ -4,18 +4,18 @@ yuntu.collection package
 Submodules
 ----------
 
-yuntu.collection.base module
-----------------------------
+yuntu.collection.alfresco module
+--------------------------------
 
-.. automodule:: yuntu.collection.base
+.. automodule:: yuntu.collection.alfresco
    :members:
    :undoc-members:
    :show-inheritance:
 
-yuntu.collection.irekua module
-------------------------------
+yuntu.collection.base module
+----------------------------
 
-.. automodule:: yuntu.collection.irekua
+.. automodule:: yuntu.collection.base
    :members:
    :undoc-members:
    :show-inheritance:

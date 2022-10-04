@@ -56,7 +56,38 @@ def media_info_is_complete(media_info: MediaInfoType) -> bool:
 
 
 class Audio(TimeMedia):
-    """Base class for all audio."""
+    """Base class for all audio.
+
+    Construct an Audio object:
+
+    Parameters
+    ----------
+    path: str, optional
+        Path to audio file.
+    array: np.array, optional
+        Numpy array with audio data
+    timeexp: int, optional
+        Time expansion factor of audio file. Will default
+        to 1.
+    media_info: dict, optional
+        Dictionary holding all audio file media information.
+        This information consists of number of channels (nchannels),
+        sample width in bytes (sampwidth), sample rate in Hertz
+        (samplerate), length of wav array (length), duration of
+        audio in seconds (duration), and file size in bytes (filesize).
+    metadata: dict, optional
+        A dictionary holding any additional information on the
+        audio file.
+    id: str, optional
+        A identifier for this audiofile.
+    lazy: bool, optional
+        A boolean flag indicating whether loading of audio data
+        is done only when required. Defaults to false.
+    samplerate: int, optional
+        The samplerate used to read the audio data. If different
+        from the native sample rate, the audio will be resampled
+        at read.
+    """
 
     features_class = features.AudioFeatures
 
@@ -171,10 +202,19 @@ class Audio(TimeMedia):
 
     @property
     def timeexp(self):
+        """Time expansion rate."""
         return self._timeexp
 
     @timeexp.setter
     def timeexp(self, value):
+        """Time expansion rate setter.
+
+        Parameters
+        ----------
+        value : float
+            New time expansion to set
+        """
+
         if self.is_empty():
             self.force_load()
 
@@ -187,10 +227,12 @@ class Audio(TimeMedia):
 
     @property
     def samplerate(self):
+        """Audio samplerate"""
         return self.time_axis.resolution
 
     @property
     def duration(self):
+        """Audio duration"""
         return self.window.end - self.window.start
 
     @classmethod
@@ -200,7 +242,23 @@ class Audio(TimeMedia):
             lazy: Optional[bool] = False,
             samplerate: Optional[int] = None,
             **kwargs):
-        """Create a new Audio object from a database recording instance."""
+        """Create a new Audio object from a database recording instance.
+
+        Parameters
+        ----------
+        recording : pony.Entity
+            Database recording entity.
+        lazy : bool
+            Wether to retrieve data or leave operation until needed.
+        samplerate : int
+            Read samplerate for data.
+
+        Returns
+        -------
+        audio : Audio
+            An audio object.
+
+        """
         data = {
             'path': recording.path,
             'timeexp': recording.timeexp,
@@ -220,7 +278,23 @@ class Audio(TimeMedia):
             lazy: Optional[bool] = False,
             samplerate: Optional[int] = None,
             **kwargs):
-        """Create a new Audio object from a dictionary of metadata."""
+        """Create a new Audio object from a dictionary of metadata.
+
+        Parameters
+        ----------
+        dictionary : dict
+            A dict with all configurations for Audio creation.
+        lazy : bool
+            Wether to retrieve data or leave operation until needed.
+        samplerate : int
+            Read samplerate for data.
+
+        Returns
+        -------
+        audio : Audio
+            An audio object.
+
+        """
         if 'path' not in dictionary:
             message = 'No path was provided in the dictionary argument'
             raise ValueError(message)
@@ -239,7 +313,23 @@ class Audio(TimeMedia):
             samplerate: int,
             metadata: Optional[dict] = None,
             **kwargs):
-        """Create a new Audio object from a numpy array."""
+        """Create a new Audio object from a numpy array.
+
+        Parameters
+        ----------
+        array : numpy.array
+            Array containing audio signal or any 1D signal.
+        samplerate : int
+            Read samplerate for data.
+        metadata : dict
+            A dictionary containing audio metadata to associate.
+
+        Returns
+        -------
+        audio : Audio
+            An audio object.
+
+        """
         shape = array.shape
         if len(shape) == 1:
             channels = 1
@@ -279,6 +369,19 @@ class Audio(TimeMedia):
         }
 
     def read_info(self, path=None):
+        """Read media info from file headers.
+
+        Parameters
+        ----------
+        path : str
+            Recording path.
+
+        Returns
+        -------
+        media_info : dict
+            A dictionary containing media information.
+
+        """
         if path is None:
             if self.is_remote():
                 path = self.remote_load()
@@ -289,7 +392,19 @@ class Audio(TimeMedia):
         return read_info(path, self.timeexp)
 
     def load_from_path(self, path=None):
-        """Read signal from file."""
+        """Read signal from file.
+
+        Parameters
+        ----------
+        path : str
+            Path to signal data.
+
+        Returns
+        -------
+        signal : np.array
+            An array containing audio information.
+
+        """
         if path is None:
             path = self.path
 
@@ -318,7 +433,18 @@ class Audio(TimeMedia):
             path: str,
             media_format: Optional[str] = "wav",
             samplerate: Optional[int] = None):
-        """Write media to path."""
+        """Write media to path.
+
+        Parameters
+        ----------
+        path : str
+            Target path to write media.
+        media_format : str
+            Audio format to use.
+        samplerate : int
+            Write samplerate for data.
+
+        """
         self.path = path
 
         signal = self.array
@@ -332,14 +458,54 @@ class Audio(TimeMedia):
                     media_format)
 
     def listen(self, speed: Optional[float] = 1):
-        """Return HTML5 audio element player of current audio."""
+        """Return HTML5 audio element player of current audio for jupyter.
+
+        Parameters
+        ----------
+        speed : float
+            Play speed for resulting HTMLAudio element.
+        lazy : bool
+            Wether to retrieve data or leave operation until needed.
+        samplerate : int
+            Read samplerate for data.
+
+        Returns
+        -------
+        audio : HTMLAudio
+            A player for jupyter notebook.
+
+        """
         # pylint: disable=import-outside-toplevel
         from IPython.display import Audio as HTMLAudio
         rate = self.samplerate * speed
         return HTMLAudio(data=self.array, rate=rate)
 
     def blend(self, other, weight_range=None, weights=None, normalize_first=False, new_range='left'):
-        '''Blend this audio signal with another signal and produce Audio object'''
+        """Blend this audio signal with another signal and produce a new
+        Audio object.
+
+        Parameters
+        ----------
+        other : Audio
+            Audio object to blend with.
+        weight_range : list, tuple
+            A range to use as limits for random weights asigned to each signal
+            for weighted blending.
+        weights : list, tuple
+            Weigts for this signal (0) and other (1) as a list or a tuple of
+            floats.
+        normalize_first : bool
+            Wether to normalize each signal before blending.
+        new_range : str
+            Wether to use this audio ('left') or other ('right') as reference
+            for new amplitude limits.
+
+        Returns
+        -------
+        audio : Audio
+            An audio object.
+
+        """
         if self.samplerate != other.samplerate:
             raise ValueError("Both pieces should have the same samplerate")
 
@@ -402,7 +568,19 @@ class Audio(TimeMedia):
                                   metadata=metadata)
 
     def plot(self, ax=None, **kwargs):
-        """Plot soundwave in the given axis."""
+        """Plot waveform in the given axis.
+
+        Parameters
+        ----------
+        ax : matplotlib.axis
+            Database recording entity.
+
+        Returns
+        -------
+        ax : matplotlib.axis
+
+
+        """
         ax = super().plot(ax=ax, **kwargs)
 
         array = self.array.copy()
@@ -425,7 +603,15 @@ class Audio(TimeMedia):
         return ax
 
     def to_dict(self):
-        """Return a dictionary holding all audio metadata."""
+        """Return a dictionary holding all audio configs.
+
+        Returns
+        -------
+            audio_dict : dict
+                A dictionary abstraction of audio object that can be used with
+                'from_dict' method.
+
+        """
         if self.media_info is None:
             media_info = None
         else:

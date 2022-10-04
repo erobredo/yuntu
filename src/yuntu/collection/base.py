@@ -26,7 +26,17 @@ def _parse_annotation(annotation):
 
 
 class Collection:
-    """Base class for all collections."""
+    """Base class for all collections.
+
+    Parameters
+    ----------
+    db_config: dict
+        Database parameters.
+    base_path: str
+        A string that specifies a directory path to prepend to each file
+        path. This is useful when paths are relative and a copy of the data
+        exists in a given directory.
+    """
 
     db_config = {
         'provider': 'sqlite',
@@ -40,7 +50,20 @@ class Collection:
     db_manager_class = DatabaseManager
 
     def __init__(self, db_config=None, base_path=""):
-        """Initialize collection."""
+        """Initialize collection.
+
+        Create a new collection handler according to database or source
+        configuration.
+
+        Parameters
+        ----------
+        db_config: dict
+            Database parameters.
+        base_path: str
+            A string that specifies a directory path to prepend to each file
+            path. This is useful when paths are relative and a copy of the data
+            exists in a given directory.
+        """
         self.base_path = base_path
         if self.base_path != "":
             if self.base_path[:5] != "s3://":
@@ -74,6 +97,22 @@ class Collection:
         return len(self.recordings())
 
     def get(self, key, with_metadata=True):
+        """Get Audio object by key.
+
+        Fetch one Audio object using the entry's Id as key.
+
+        Parameters
+        ----------
+        key : int, str
+            Recording Id.
+        with_metadata: bool
+            Wether to include metadata in the response or not.
+
+        Returns
+        -------
+        audio : Audio
+            An audio object.
+        """
         record = self.recordings(lambda rec: rec.id == key).get()
         return self.build_audio(record, with_metadata=with_metadata)
 
@@ -85,6 +124,29 @@ class Collection:
             with_metadata=False,
             with_annotations=False,
             **kwargs):
+        """Get audio dataframe from query.
+
+        Fetch recording entries and build a pandas dataframe compatible with
+        AudioAccessor.
+
+        Parameters
+        ----------
+        query : callable
+            A function that conforms to Pony's query syntax.
+        limit : int
+            The number of maximum entries to return.
+        offset : int
+            Skip this many entries and return the rest up to limit.
+        with_metadata : bool
+            Wether to include metadata in the response or not.
+        with_annotations : bool
+            Wether to include annotations in the response or not.
+
+        Returns
+        -------
+        recording_dataframe : pandas.DataFrame
+            A dataframe holding recordings.
+        """
         if limit is None:
             query_slice = slice(offset, None)
         else:
@@ -116,6 +178,27 @@ class Collection:
             limit=None,
             offset=0,
             with_metadata=None):
+        """Get annotation dataframe from query.
+
+        Fetch recording entries and build a pandas dataframe compatible with
+        AnnotationAccessor.
+
+        Parameters
+        ----------
+        query: callable
+            A function that conforms to Pony's query syntax.
+        limit: int
+            The number of maximum entries to return.
+        offset: int
+            Skip this many entries and return the rest up to limit.
+        with_metadata: bool
+            Wether to include metadata in the response or not.
+
+        Returns
+        -------
+        annotation_dataframe: pandas.DataFrame
+            A dataframe holding annotations.
+        """
         if limit is None:
             query_slice = slice(offset, None)
         else:
@@ -140,63 +223,224 @@ class Collection:
         return pd.DataFrame(records)
 
     def get_db_manager(self):
+        """Get database manager.
+
+        Use config to retrieve a database connection manager.
+
+        Parameters
+        ----------
+            None
+
+        Returns
+        -------
+        db_manager: DatabaseManager
+            Data base manager according to configuration.
+        """
         return self.db_manager_class(**self.db_config)
 
     def get_abspath(self, path):
+        """Get absolute path from entry.
+
+        Compute absolute path using base path configuration.
+
+        Parameters
+        ----------
+        path: str
+            Recording path.
+
+        Returns
+        -------
+        absolute_path: str
+            Absolute path according to configs.
+        """
         if path[:5] != "s3://":
             if not os.path.isabs(path):
                 return os.path.join(self.base_path, path)
         return path
 
     def insert(self, meta_arr):
-        """Directly insert new media entries without a datastore."""
+        """Directly insert new media entries without a datastore.
+
+        Insert an array of entries to collection.
+
+        Parameters
+        ----------
+        meta_arr: list
+            A list of dictionaries specifying new entries to insert.
+
+        Returns
+        -------
+        insertions: list
+            Newly inserted entries.
+        """
         if not isinstance(meta_arr, (list, tuple)):
             meta_arr = [meta_arr]
         return self.db_manager.insert(meta_arr)
 
     def annotate(self, meta_arr):
-        """Insert annotations to database."""
+        """Insert annotations to database.
+
+        Insert an array of entries to collection.
+
+        Parameters
+        ----------
+        meta_arr: list
+            A list of dictionaries specifying new entries to insert.
+
+        Returns
+        -------
+        insertions: list
+            Newly inserted entries.
+        """
         return self.db_manager.insert(meta_arr, model="annotation")
 
     def update_recordings(self, query, set_obj):
-        """Update matches."""
+        """Update matching recordings.
+
+        Update entries that match query according to specification.
+
+        Parameters
+        ----------
+        query: callable
+            A function that conforms to Pony's query syntax.
+        set_obj: dict
+            A dictionary that has field names as keys and new values as values.
+
+        Returns
+        -------
+        updates: list
+            Update results.
+        """
         return self.db_manager.update(query, set_obj, model="recording")
 
     def update_annotations(self, query, set_obj):
-        """Update matches."""
+        """Update matching annotations.
+        Update entries that match query according to specification.
+
+        Parameters
+        ----------
+        query: callable
+            A function that conforms to Pony's query syntax.
+        set_obj: dict
+            A dictionary that has field names as keys and new values as values.
+
+        Returns
+        -------
+        updates: list
+            Update results.
+        """
         return self.db_manager.update(query, set_obj, model="annotation")
 
     def delete_recordings(self, query):
-        """Delete matches."""
+        """Delete matching recordings.
+
+        Delete entries that match query.
+
+        Parameters
+        ----------
+        query: callable
+            A function that conforms to Pony's query syntax.
+
+        Returns
+        -------
+        deletes: list
+            Delete results.
+        """
         return self.db_manager.delete(query, model='recording')
 
     def delete_annotations(self, query):
-        """Delete matches."""
+        """Delete matching annotations.
+
+        Delete entries that match query.
+
+        Parameters
+        ----------
+        query: callable
+            A function that conforms to Pony's query syntax.
+
+        Returns
+        -------
+        deletes: list
+            Delete results.
+        """
         return self.db_manager.delete(query, model='annotation')
 
     @property
     def recordings_model(self):
+        """Recordings model.
+
+        Recordings model for this collection.
+
+        """
         return self.db_manager.models.recording
 
     @property
     def annotations_model(self):
+        """Annotations model.
+
+        Annotations model for this collection.
+
+        """
         return self.db_manager.models.annotation
 
     def annotations(self, query=None, iterate=True):
-        """Retrieve annotations from database."""
+        """Retrieve annotations from database.
+
+        Fetch annotations according to query.
+
+        Parameters
+        ----------
+        query: callable
+            A function that conforms to Pony's query syntax.
+        iterate: bool
+            Wether to return as list or as an iterator.
+        Returns
+        -------
+        annotations: list, iterator
+            A list of annotations as pony entities.
+        """
         matches = self.db_manager.select(query, model="annotation")
         if iterate:
             return matches
         return list(matches)
 
     def recordings(self, query=None, iterate=True):
-        """Retrieve audio objects."""
+        """Retrieve recording objects from database
+
+        Fetch recordings according to query.
+
+        Parameters
+        ----------
+        query: callable
+            A function that conforms to Pony's query syntax.
+        iterate: bool
+            Wether to return as list or as an iterator.
+        Returns
+        -------
+        recordings: list, iterator
+            A list of recording entries as pony entities.
+        """
         matches = self.db_manager.select(query, model="recording")
         if iterate:
             return matches
         return list(matches)
 
     def build_audio(self, recording, with_metadata=True):
+        """Build audio object.
+
+        Build audio object from database entry.
+
+        Parameters
+        ----------
+        recording: pony.Entity
+            An entity that conforms to Recording class for this collection.
+        with_metadata: bool
+            Wether to include metadata in the response or not.
+
+        Returns
+        -------
+        audio: Audio
+        """
         annotations = []
         for annotation in recording.annotations:
             data = annotation.to_dict()
@@ -217,11 +461,42 @@ class Collection:
             lazy=True)
 
     def pull(self, datastore):
-        """Pull data from datastore and insert into collection."""
+        """Pull data from datastore and insert into collection.
+
+        Pull data from a datastore and insert to collection.
+
+        Parameters
+        ----------
+        datastore: Datastore
+            A yuntu datastore that specifies a data source to incorporate.
+
+        """
+
         datastore.insert_into(self)
 
     def materialize(self, out_name, query=None, out_dir="", tqdm=None):
-        """Create materialized collection."""
+        """Create materialized collection.
+
+        Create an sqlite copy of collection's database as well as a directory
+        holding a copy of the corresponding data.
+
+        Parameters
+        ----------
+        out_name: str
+            Name for the new materialized collection.
+        query: callable
+            A function that conforms to Pony's query syntax.
+        out_dir: str
+            A target directory to copy data.
+        tqdm: module
+            A tqdm module to use for reporting progress.
+
+        Returns
+        -------
+        collection_path: str
+            The absolute path for a newly copy of the corresponding data and
+            database.
+        """
         target_path = os.path.join(out_dir, out_name)
         copystore = CopyDatastore(collection=self,
                                   query=query,

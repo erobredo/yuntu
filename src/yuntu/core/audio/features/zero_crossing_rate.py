@@ -63,6 +63,16 @@ class ZeroCrossingRate(TimeFeature):
             **kwargs)
 
     def compute(self):
+        """Compute representation from audio data.
+
+        Uses the spectrogram instance configurations for stft
+        calculation.
+
+        Returns
+        -------
+        np.array
+            Computed representation of audio data.
+        """
         zero_crossings = librosa.core.zero_crossings(
             self.audio,
             threshold=self.threshold,
@@ -78,6 +88,14 @@ class ZeroCrossingRate(TimeFeature):
         return crossings_per_frame / (2 * frame_duration)
 
     def to_dict(self):
+        """Return feature's specification as dictionary.
+
+        Returns
+        -------
+        dict
+            A dictionary abstraction of the feature.
+
+        """
         return {
             'threshold': self.threshold,
             'ref_magnitude': self.ref_magnitude,
@@ -87,10 +105,38 @@ class ZeroCrossingRate(TimeFeature):
         }
 
     def write(self, path=None):
-        # TODO
-        pass
+        """Write feature to path.
+
+        Parameters
+        ----------
+        path : str
+            Path to write feature.
+
+        Raises
+        ------
+        NotImplementedError
+            Always, not implemented
+        """
+        NotImplementedError("Write method not implemented for this feature.")
 
     def plot(self, ax=None, **kwargs):
+        """Plot feature.
+
+        Notes
+        -----
+        Will create a new figure if no axis (ax) was provided.
+
+        Parameters
+        ----------
+        ax : matplotlib.Axes
+            Where to plot. If not provided, a new axis will be created.
+
+        Returns
+        -------
+        matplotlib.Axes
+            The axis where the feature was plotted.
+
+        """
         ax = super().plot(ax=ax, **kwargs)
 
         masked = np.ma.masked_less_equal(

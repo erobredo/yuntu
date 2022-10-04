@@ -5,6 +5,23 @@ from yuntu.core.audio.features.base import FrequencyFeature
 
 
 class Spectrum(FrequencyFeature):
+    """A class for spectral features.
+
+    Parameters
+    ----------
+    audio : Audio
+        An audio object.
+    array : numpy.array
+        An array to use as feature's data.
+    min_freq : float
+        Minimum frequency of the representation.
+    max_freq : float
+        Maximum frequency of the representation.
+    resolution : float
+        Frequency resolution.
+    frequency_axis : FrequencyAxis
+        A specific frequency axis to take.
+    """
     plot_title = 'Spectrum'
 
     def __init__(
@@ -16,6 +33,23 @@ class Spectrum(FrequencyFeature):
             resolution=None,
             frequency_axis=None,
             **kwargs):
+        """Construct spectral feature.
+
+        Parameters
+        ----------
+        audio : Audio
+            An audio object.
+        array : numpy.array
+            An array to use as feature's data.
+        min_freq : float
+            Minimum frequency of the representation.
+        max_freq : float
+            Maximum frequency of the representation.
+        resolution : float
+            Frequency resolution.
+        frequency_axis : FrequencyAxis
+            A specific frequency axis to take.
+        """
 
         if frequency_axis is None:
             from yuntu.core.audio.audio import Audio
@@ -59,13 +93,51 @@ class Spectrum(FrequencyFeature):
             **kwargs)
 
     def compute(self):
+        """Compute representation from audio data.
+
+        Uses the spectrogram instance configurations for stft
+        calculation.
+
+        Returns
+        -------
+        np.array
+            Computed representation of audio data.
+        """
         return np.abs(np.fft.rfft(self.audio.array))
 
     def write(self, path=None):
-        # TODO
-        pass
+        """Write feature to path.
+
+        Parameters
+        ----------
+        path : str
+            Path to write feature.
+
+        Raises
+        ------
+        NotImplementedError
+            Always, not implemented
+        """
+        NotImplementedError("Write method not implemented for this feature.")
 
     def plot(self, ax=None, **kwargs):
+        """Plot feature.
+
+        Notes
+        -----
+        Will create a new figure if no axis (ax) was provided.
+
+        Parameters
+        ----------
+        ax : matplotlib.Axes
+            Where to plot. If not provided, a new axis will be created.
+
+        Returns
+        -------
+        matplotlib.Axes
+            The axis where the feature was plotted.
+
+        """
         ax = super().plot(ax=ax, **kwargs)
 
         ax.plot(

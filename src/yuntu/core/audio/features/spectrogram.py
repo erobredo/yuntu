@@ -52,12 +52,54 @@ WINDOW_FUNCTION = HANN
 Shape = namedtuple('Shape', ['rows', 'columns'])
 
 def label_to_hz(x, pos):
-    'The two args are the value and tick position'
+    """Convert mel scale to Hz.
+
+    Parameters
+    ----------
+    x : float
+        Mel value.
+    pos : float
+        Unused position value.
+
+    Returns
+    -------
+    str
+        Formated label in Hz.
+    """
     mel = mel_to_hz(x)
     return '%1.0f' % (mel)
 
 class Spectrogram(TimeFrequencyFeature):
-    """Spectrogram class."""
+    """Class for spectrogram feature.
+
+    Parameters
+    ----------
+    audio : Audio
+        An audio object.
+    n_fft : int
+        Length of the windowed signal after padding with zeros.
+    hop_length : int
+        Number of audio samples between adjacent STFT columns.
+    window_function : str, numpy.array, callable
+        A window specification by name, array (of size n_fft) or function.
+        Defaults to a raised cosine window (‘hann’), which is adequate for most
+        applications in audio signal processing.
+    max_freq : float
+        Maximum frequency of the representation.
+    freq_resolution : float
+        Resolution of the frequency axis.
+    frequency_axis : FrequencyAxis
+        A specific frequency axis to take.
+    duration : float
+        Duration of the feature. This parameter is only considered when no
+        audio is provided.
+    time_resolution : float
+        Resolution for time axis.
+    time_axis : TimeAxis
+        A specific time axis to take.
+    array : numpy.array
+        An array to use as feature's data.
+    """
     plot_title = 'Amplitude Spectrogram'
     _default_cmap = 'gray'
 
@@ -75,7 +117,36 @@ class Spectrogram(TimeFrequencyFeature):
             time_axis=None,
             array=None,
             **kwargs):
-        """Construct Spectrogram object."""
+        """Construct Spectrogram object.
+
+        Parameters
+        ----------
+        audio : Audio
+            An audio object.
+        n_fft : int
+            Length of the windowed signal after padding with zeros.
+        hop_length : int
+            Number of audio samples between adjacent STFT columns.
+        window_function : str, numpy.array, callable
+            A window specification by name, array (of size n_fft) or function.
+            Defaults to a raised cosine window (‘hann’), which is adequate for most
+            applications in audio signal processing.
+        max_freq : float
+            Maximum frequency of the representation.
+        freq_resolution : float
+            Resolution of the frequency axis.
+        frequency_axis : FrequencyAxis
+            A specific frequency axis to take.
+        duration : float
+            Duration of the feature. This parameter is only considered when no
+            audio is provided.
+        time_resolution : float
+            Resolution for time axis.
+        time_axis : TimeAxis
+            A specific time axis to take.
+        array : numpy.array
+            An array to use as feature's data.
+        """
         self.n_fft = n_fft
         self.hop_length = hop_length
         self.window_function = window_function
@@ -132,6 +203,21 @@ class Spectrogram(TimeFrequencyFeature):
 
     @staticmethod
     def _default_resolution(n_fft, max_freq):
+        """Compute default resolution.
+
+        Parameters
+        ----------
+        n_fft : int
+            Lenght of signal to process by frame.
+        max_freq : float
+            Maximum frequency.
+
+        Returns
+        -------
+        resolution : float
+            Default resolution according to parameters.
+
+        """
         rows = 1 + n_fft // 2
         return rows / max_freq
 
@@ -168,11 +254,23 @@ class Spectrogram(TimeFrequencyFeature):
         return f'{class_name}({args_string})'
 
     def transform(self, array):
-        """Apply transformation to array"""
+        """Apply transformation to array.
+
+        Parameters
+        ----------
+        array : numpy.array
+            Signal to transform.
+
+        Returns
+        -------
+        np.array
+            Computed transformation.
+
+        """
         return np.abs(stft(array, n_fft=self.n_fft, hop_length=self.hop_length, window=self.window_function))
 
     def compute(self):
-        """Compute spectrogram from audio data.
+        """Compute representation from audio data.
 
         Uses the spectrogram instance configurations for stft
         calculation.
@@ -180,7 +278,7 @@ class Spectrogram(TimeFrequencyFeature):
         Returns
         -------
         np.array
-            Calculated spectrogram.
+            Computed representation of audio data.
         """
         if not self._has_trivial_window():
             start = self._get_start()
@@ -222,11 +320,26 @@ class Spectrogram(TimeFrequencyFeature):
 
     @property
     def shape(self) -> Shape:
-        """Get spectrogram shape."""
+        """Get spectrogram shape.
+
+        Returns
+        -------
+        Shape
+            Spectrogram shape as object.
+
+        """
         return Shape(rows=self.frequency_size, columns=self.time_size)
 
     @property
     def spectrum_values(self):
+        """Get vertical axis values.
+
+        Returns
+        -------
+        numpy.array
+            Array of vertical values.
+
+        """
         return self.frequencies
 
     def plot(self, ax=None, **kwargs):
@@ -236,8 +349,8 @@ class Spectrogram(TimeFrequencyFeature):
         -----
         Will create a new figure if no axis (ax) was provided.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         figsize: tuple, optional
             Figure size in inches
         cmap: str, optional
@@ -298,17 +411,43 @@ class Spectrogram(TimeFrequencyFeature):
         return ax
 
     def iter_rows(self):
-        """Iterate over spectrogram rows."""
+        """Iterate over spectrogram rows.
+
+        Returns
+        -------
+        iterator
+            Row iterator for feature values.
+
+        """
         for row in self.array:
             yield row
 
     def iter_cols(self):
-        """Iterate over spectrogram columns."""
+        """Iterate over spectrogram columns.
+
+        Returns
+        -------
+        iterator
+            Column iterator for feature values.
+
+        """
         for col in self.array.T:
             yield col
 
     def power(self, lazy=False):
-        """Get power spectrogram from spec."""
+        """Get power spectrogram from spec.
+
+        Parameters
+        ----------
+        lazy : bool
+            Wether to compute array right away (False) or not.
+
+        Returns
+        -------
+        PowerSpectrogram
+            Power spectrogram computed from spectrogram values.
+
+        """
         kwargs = self._copy_dict()
 
         if not self.is_empty() or not lazy:
@@ -323,7 +462,19 @@ class Spectrogram(TimeFrequencyFeature):
             ref: Optional[float] = 1.0,
             amin: Optional[float] = 1e-05,
             top_db: Optional[float] = 80.0):
-        """Get decibel spectrogram from spec."""
+        """Get decibel spectrogram from spec.
+
+        Parameters
+        ----------
+        lazy : bool
+            Wether to compute array right away (False) or not.
+
+        Returns
+        -------
+        DecibelSpectrogram
+            Decibel spectrogram computed from spectrogram values.
+
+        """
         kwargs = {
             'ref': ref,
             'amin': amin,
@@ -337,7 +488,19 @@ class Spectrogram(TimeFrequencyFeature):
         return DecibelSpectrogram(**kwargs)
 
     def mel(self, lazy=False):
-        """Get power spectrogram from spec."""
+        """Get mel spectrogram from spec.
+
+        Parameters
+        ----------
+        lazy : bool
+            Wether to compute array right away (False) or not.
+
+        Returns
+        -------
+        MelSpectrogram
+            Mel spectrogram computed from spectrogram values.
+
+        """
         kwargs = self._copy_dict()
 
         if not self.is_empty() or not lazy:
@@ -351,7 +514,14 @@ class Spectrogram(TimeFrequencyFeature):
         return MelSpectrogram(**kwargs)
 
     def to_dict(self):
-        """Return spectrogram metadata."""
+        """Return feature's specification as dictionary.
+
+        Returns
+        -------
+        dict
+            A dictionary abstraction of the feature.
+
+        """
         return {
             'n_fft': self.n_fft,
             'hop_length': self.hop_length,
@@ -361,6 +531,20 @@ class Spectrogram(TimeFrequencyFeature):
 
     @classmethod
     def from_dict(cls, data):
+        """Produce instance from dictionary abstraction.
+
+        Parameters
+        ----------
+        data : dict
+            A dictionary holding configurations to generate this type of
+            feature.
+
+        Returns
+        -------
+        TimeFrequencyFeature
+            One of the spectrogram features depending on input configs.
+
+        """
         spec_dict = dict(data)
         spec_type = spec_dict.pop('type', None)
 
@@ -383,16 +567,39 @@ class Spectrogram(TimeFrequencyFeature):
 
 
 class PowerSpectrogram(Spectrogram):
-    """Power spectrogram class."""
+    """Power spectrogram class.
+
+    Accepts the same parameters as Spectrogram class.
+
+    """
     plot_title = 'Power Spectrogram'
 
     def transform(self, array):
-        """Apply transformation to array"""
+        """Apply transformation to array.
+
+        Parameters
+        ----------
+        array : numpy.array
+            Signal to transform.
+
+        Returns
+        -------
+        np.array
+            Computed transformation.
+
+        """
         spectrogram = super().transform(array)
         return spectrogram**2
 
     def power(self, *args, **kwargs):
-        """Get power spectrogram from spec."""
+        """Get power spectrogram from spec.
+
+        Raises
+        -------
+        NotImplementedError
+            Always, method not implemented.
+
+        """
         raise NotImplementedError("The method is not implemented for this feature.")
 
     def db(
@@ -401,7 +608,25 @@ class PowerSpectrogram(Spectrogram):
             ref: Optional[float] = 1.0,
             amin: Optional[float] = 1e-05,
             top_db: Optional[float] = 80.0):
-        """Get decibel spectrogram from power spec."""
+        """Get decibel spectrogram from power spec.
+
+        Parameters
+        ----------
+        lazy : bool
+            Wether to compute array right away (False) or not.
+        ref : float
+            Reference for amplitude scaling.
+        amin : float
+            Minimum treshold for amplitude.
+        top_db : float
+            Maximum decibels to represent.
+
+        Returns
+        -------
+        DecibelSpectrogram
+            Decibel spectrogram computed from power spectrogram values.
+
+        """
         kwargs = self.to_dict()
         kwargs['annotations'] = self.annotations
         kwargs['window'] = self.window
@@ -427,7 +652,19 @@ class PowerSpectrogram(Spectrogram):
         return DecibelSpectrogram(**kwargs)
 
     def mel(self, lazy=False):
-        """Get power spectrogram from spec."""
+        """Get power spectrogram from spec.
+
+        Parameters
+        ----------
+        lazy : bool
+            Wether to compute array right away (False) or not.
+
+        Returns
+        -------
+        MelSpectrogram
+            Mel spectrogram computed from power spectrogram values.
+
+        """
         kwargs = self._copy_dict()
 
         if not self.is_empty() or not lazy:
@@ -440,14 +677,39 @@ class PowerSpectrogram(Spectrogram):
         return MelSpectrogram(**kwargs)
 
 class DecibelSpectrogram(Spectrogram):
-    """Decibel spectrogram class."""
+    """Decibel spectrogram class.
+
+    Accepts all parameters for Spectrogram plus the following:
+
+    Parameters
+    ----------
+    ref : float
+        Reference for amplitude scaling.
+    amin : float
+        Minimum treshold for amplitude.
+    top_db : float
+        Maximum decibels to represent.
+    """
+
     plot_title = 'Decibel Spectrogram'
     ref = 1.0
     amin = 1e-05
     top_db = 80.0
 
     def __init__(self, ref=None, amin=None, top_db=None, **kwargs):
-        """Construct a decibel spectrogram."""
+        """Construct a decibel spectrogram.
+
+        Accepts all parameters for Spectrogram __init__ plus the following:
+
+        Parameters
+        ----------
+        ref : float
+            Reference for amplitude scaling.
+        amin : float
+            Minimum treshold for amplitude.
+        top_db : float
+            Maximum decibels to represent.
+        """
         if ref is not None:
             self.ref = ref
 
@@ -460,19 +722,51 @@ class DecibelSpectrogram(Spectrogram):
         super().__init__(**kwargs)
 
     def mel(self, *args, **kwargs):
-        """Get mel spectrogram from spec."""
+        """Get mel spectrogram from spec.
+
+        Raises
+        -------
+        NotImplementedError
+            Always, method not implemented.
+
+        """
         raise NotImplementedError("The method is not implemented for this feature.")
 
     def power(self, *args, **kwargs):
-        """Get power spectrogram from spec."""
+        """Get power spectrogram from spec.
+
+        Raises
+        -------
+        NotImplementedError
+            Always, method not implemented.
+
+        """
         raise NotImplementedError("The method is not implemented for this feature.")
 
     def db(self, *args, **kwargs):
-        """Get decibel spectrogram from spec."""
+        """Get decibel spectrogram from spec.
+
+        Raises
+        -------
+        NotImplementedError
+            Always, method not implemented.
+
+        """
         raise NotImplementedError("The method is not implemented for this feature.")
 
     def transform(self, array):
-        """Apply transformation to array"""
+        """Apply transformation to array.
+
+        Parameters
+        ----------
+        array : numpy.array
+            Signal to transform.
+
+        Returns
+        -------
+        np.array
+            Computed transformation.
+        """
         spectrogram = super().transform(array)
         return amplitude_to_db(
                 spectrogram,
@@ -484,10 +778,24 @@ class MelScaleAxis(FrequencyAxis):
     "An axis that has mel-scaled frequency."
 
     def get_bin(self, value):
+        """Get bin associated to value.
+
+        Parameters
+        ----------
+        value : float
+            A value in Hz to convert.
+
+        Returns
+        -------
+        bin : int
+            Computed bin associated to value.
+
+        """
         mel_value = hz_to_mel(value)
         return int(np.floor(mel_value * self.resolution))
 
     def get_bins(self, start=None, end=None, window=None, size=None):
+        """Get values from bins."""
         start = self.get_start(start=start, window=window)
         end = self.get_end(end=end, window=window)
 
@@ -502,23 +810,45 @@ class MelScaleAxis(FrequencyAxis):
         return mel_to_hz(mel_freqs)
 
 class MelSpectrogram(Spectrogram):
-    """Decibel spectrogram class."""
+    """Mel spectrogram class.
+
+    Accepts all parameters for Spectrogram class plus the following:
+
+    Parameters
+    ----------
+    sr : float
+        Sampling rate for mel computation.
+    n_mels : int
+        Number of Mel bands to generate
+    """
     frequency_axis_class = MelScaleAxis
     plot_title = 'Mel-scaled Spectrogram'
 
     def __init__(self, *args, sr=None, n_mels=None, **kwargs):
+        """Construct mel spectrogram.
+        Accepts all parameters for Spectrogram __init__ plus the following:
+
+        Parameters
+        ----------
+        sr : float
+            Sampling rate for mel computation.
+        n_mels : float
+            Number of Mel bands to generate
+        """
         self._sr = sr
         self._n_mels = n_mels
         super().__init__(*args,**kwargs)
 
     @property
     def sr(self):
+        """Sample rate property for mel computation."""
         if self._sr is None:
             return 2*(self.time_axis.resolution * self.hop_length // 2)
         return self._sr
 
     @property
     def n_mels(self):
+        """Number of bins in mel scale."""
         if self._n_mels is None:
             self._n_mels = (1 + self.n_fft // 2)//4
         return self._n_mels
@@ -531,21 +861,47 @@ class MelSpectrogram(Spectrogram):
         return rows / max_mel
 
     def transform(self, array):
-        """Apply transformation to array"""
+        """Apply transformation to array.
+
+        Parameters
+        ----------
+        array : numpy.array
+            Signal to transform.
+
+        Returns
+        -------
+        np.array
+            Computed transformation.
+
+        """
         power_spectrogram = super().transform(array)**2
         max_freq = self.window.max
         return melspectrogram(S=power_spectrogram, sr=self.sr, n_mels=self.n_mels)
 
     @property
     def spectrum_values(self):
+        """Vertical axis values."""
         return hz_to_mel(self.frequencies)
 
     def mel(self, *args, **kwargs):
-        """Get mel spectrogram from spec."""
+        """Get mel spectrogram from spec.
+
+        Raises
+        -------
+        NotImplementedError
+            Always, method not implemented.
+
+        """
         raise NotImplementedError("The method is not implemented for this feature.")
 
     def power(self, *args, **kwargs):
-        """Get power spectrogram from spec."""
+        """Get power spectrogram from spec.
+
+        Raises
+        -------
+        NotImplementedError
+            Always, method not implemented.
+        """
         raise NotImplementedError("The method is not implemented for this feature.")
 
     def db(
@@ -554,7 +910,25 @@ class MelSpectrogram(Spectrogram):
             ref: Optional[float] = 1.0,
             amin: Optional[float] = 1e-05,
             top_db: Optional[float] = 80.0):
-        """Get decibel spectrogram from power spec."""
+        """Get decibel spectrogram from power spec.
+
+        Parameters
+        ----------
+        lazy : bool
+            Wether to compute array right away (False) or not.
+        ref : float
+            Reference for amplitude scaling.
+        amin : float
+            Minimum treshold for amplitude.
+        top_db : float
+            Maximum decibels to represent.
+
+        Returns
+        -------
+        DecibelMelSpectrogram
+            Decibel mel spectrogram computed from power spectrogram values.
+
+        """
         kwargs = self.to_dict()
         kwargs['annotations'] = self.annotations
         kwargs['window'] = self.window
@@ -579,6 +953,18 @@ class MelSpectrogram(Spectrogram):
         return DecibelMelSpectrogram(**kwargs)
 
     def plot(self, ax=None, **kwargs):
+        """Plot feature.
+        Parameters
+        ----------
+        ax : matplotlib.Axes
+            An axes to plot
+
+        Returns
+        -------
+        ax : matplotlib.Axes
+            Axes with plot.
+
+        """
         ax = super().plot(ax, **kwargs)
         formatter = FuncFormatter(label_to_hz)
         ax.yaxis.set_major_formatter(formatter)
@@ -586,14 +972,38 @@ class MelSpectrogram(Spectrogram):
         return ax
 
 class DecibelMelSpectrogram(MelSpectrogram):
-    """Decibel spectrogram class."""
+    """Decibel mel spectrogram class.
+
+    Accepts all parameters for MelSpectrogram plus the following:
+
+    Parameters
+    ----------
+    ref : float
+        Reference for amplitude scaling.
+    amin : float
+        Minimum treshold for amplitude.
+    top_db : float
+        Maximum decibels to represent.
+    """
     plot_title = 'Decibel Mel-scaled Spectrogram'
     ref = 1.0
     amin = 1e-05
     top_db = 80.0
 
     def __init__(self, ref=None, amin=None, top_db=None, **kwargs):
-        """Construct a decibel mel-spectrogram."""
+        """Construct a decibel mel-spectrogram.
+
+        Accepts all parameters for MelSpectrogram __init__ plus the following:
+
+        Parameters
+        ----------
+        ref : float
+            Reference for amplitude scaling.
+        amin : float
+            Minimum treshold for amplitude.
+        top_db : float
+            Maximum decibels to represent.
+        """
         if ref is not None:
             self.ref = ref
 
@@ -606,19 +1016,49 @@ class DecibelMelSpectrogram(MelSpectrogram):
         super().__init__(**kwargs)
 
     def mel(self, *args, **kwargs):
-        """Get mel spectrogram from spec."""
+        """Get mel spectrogram from spec.
+
+        Raises
+        -------
+        NotImplementedError
+            Always, method not implemented.
+        """
         raise NotImplementedError("The method is not implemented for this feature.")
 
     def power(self, *args, **kwargs):
-        """Get power spectrogram from spec."""
+        """Get power spectrogram from spec.
+
+        Raises
+        -------
+        NotImplementedError
+            Always, method not implemented.
+        """
         raise NotImplementedError("The method is not implemented for this feature.")
 
     def db(self, *args, **kwargs):
-        """Get decibel spectrogram from spec."""
+        """Get decibel spectrogram from spec.
+
+        Raises
+        -------
+        NotImplementedError
+            Always, method not implemented.
+        """
         raise NotImplementedError("The method is not implemented for this feature.")
 
     def transform(self, array):
-        """Apply transformation to array"""
+        """Apply transformation to array.
+
+        Parameters
+        ----------
+        array : numpy.array
+            Signal to transform.
+
+        Returns
+        -------
+        np.array
+            Computed transformation.
+
+        """
         mel_spectrogram = super().transform(array)
         return power_to_db(
                 mel_spectrogram,

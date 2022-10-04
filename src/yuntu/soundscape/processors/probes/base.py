@@ -16,12 +16,12 @@ class Probe(ABC):
         """Apply probe and output a list of dicts with a geometry attribute.
 
         The output should be a list of dictionaries with the following minimal
-        structure and information:
-        {
-            'geometry': <yuntu.core.geometry.Geometry>,
-            'labels': [{"key": <str>, "value": <str>, "type": <str>}, ...],
-            'score': <dict>
-        }
+        structure and information::
+            {
+                'geometry': <yuntu.core.geometry.Geometry>,
+                'labels': [{'key': <str>, 'value': <str>, 'type': <str>}, ...],
+                'score': <dict>
+            }
 
         """
 
@@ -30,7 +30,20 @@ class Probe(ABC):
         """Remove memory footprint."""
 
     def prepare_annotation(self, output):
-        """Buid annotation from individual output"""
+        """Buid annotation from individual output.
+
+        Parameters
+        ----------
+        output : dict
+            An individual output for the apply method of this class.
+
+        Returns
+        -------
+        annotation_meta : dict
+            A dictionary with configurations for annotation creation within
+            collections.
+
+        """
 
         geom = output["geometry"]
         start_time, min_freq, end_time, max_freq = geom.geometry.bounds
@@ -63,12 +76,28 @@ class Probe(ABC):
 
     @property
     def info(self):
+        """Return information about probe as a dictionary."""
         return {
             'probe_class': self.__class__.__name__
         }
 
     def annotate(self, target, record_time=None, **kwargs):
-        """Apply probe and produce annotations"""
+        """Apply probe and produce annotations.
+
+        Parameters
+        ----------
+        target : Audio
+            An audio object to process.
+        record_time : datetime.datetime
+            A recording datetime that can be used to generate absolute time
+            limits for annotations.
+
+        Returns
+        -------
+        annotations : list
+            A list of formated dictionaries defining annotations.
+
+        """
 
         outputs = self.apply(target, **kwargs)
         annotations = []
@@ -121,6 +150,7 @@ class ModelProbe(Probe, ABC):
 
     @property
     def info(self):
+        """Return information about probe as dictionary."""
         return {
             'probe_class': self.__class__.__name__,
             'model_path': self.model_path
@@ -128,6 +158,7 @@ class ModelProbe(Probe, ABC):
 
     @property
     def model(self):
+        """Return probe's model."""
         if self._model is None:
             self.load_model()
         return self._model
