@@ -80,14 +80,4 @@ class ACI_SPECTRUM(AcousticIndex):
     name = 'ACI_SPECTRUM'
 
     def run(self, array):
-        sum_amplitude = np.sum(array, axis=0)
-        delta = np.abs(sum_amplitude[:sum_amplitude.shape[0]-1] - sum_amplitude[1:])
-        return np.sum(delta)/np.sum(sum_amplitude)
-
-class CVR_SPECTRUM(AcousticIndex):
-    name = 'CVR_SPECTRUM'
-
-    def run(self, array):
-        power = np.clip(array, 1e-3, 1e+3)**2
-        decibels = 10*np.log10(power)
-        return np.sum((decibels > 2).astype(float))/decibels.size
+        return np.sum(((np.abs(np.diff(array,1)).transpose())/(np.sum(array,1)).transpose()))
