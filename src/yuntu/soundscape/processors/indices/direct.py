@@ -71,3 +71,24 @@ class EXAG(AcousticIndex):
         _, mod_deciles, perc_ranges = decile_mod(ref)
         core = interpercentile_mean_decibels(power, ref, perc_ranges)
         return tail-core
+
+#Indices from: Pieretti, N., Farina, A., & Morri, D. (2011).
+# A new methodology to infer the singing activity of an avian community:
+# The Acoustic Complexity Index (ACI). Ecological indicators, 11(3), 868-873.
+
+class ACI_SPECTRUM(AcousticIndex):
+    name = 'ACI_SPECTRUM'
+
+    def run(self, array):
+        amplitude = np.abs(np.clip(array, 1e-3, 1e+3))
+        sum_amplitude = np.sum(amplitude, axis=0)
+        delta = np.abs(sum_amplitude[:sum_amplitude.shape[0]-1] - sum_amplitude[1:])
+        return np.sum(delta)/np.sum(sum_amplitude)
+
+class CVR_SPECTRUM(AcousticIndex):
+    name = 'CVR_SPECTRUM'
+
+    def run(self, array):
+        power = np.clip(array, 1e-3, 1e+3)**2
+        decibels = 10*np.log10(power)
+        return np.sum((decibels > 2).astype(float))/decibels.size
