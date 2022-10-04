@@ -263,7 +263,7 @@ class Spectrogram(TimeFrequencyFeature):
 
         Returns
         -------
-        np.array
+        numpy.array
             Computed transformation.
 
         """
@@ -277,7 +277,7 @@ class Spectrogram(TimeFrequencyFeature):
 
         Returns
         -------
-        np.array
+        numpy.array
             Computed representation of audio data.
         """
         if not self._has_trivial_window():
