@@ -41,5 +41,5 @@ class ProbeDataframe(Pipeline):
                                 ptype='scalar')
         self["matches"] = probe_recordings(self["recordings_bag"],
                                            self["probe_config"],
-                                           self["id_type"]
+                                           self["id_type"],
                                            self["time_col"])
