@@ -10,6 +10,7 @@ class ProbeDataframe(Pipeline):
                  name,
                  recordings,
                  probe_config,
+                 time_col=None,
                  **kwargs):
 
         if not isinstance(probe_config, dict):
@@ -19,6 +20,7 @@ class ProbeDataframe(Pipeline):
 
         self.recordings = recordings
         self.probe_config = probe_config
+        self.time_col=time_col
         self.build()
 
     def build(self):
@@ -28,6 +30,9 @@ class ProbeDataframe(Pipeline):
         self['npartitions'] = place(data=10,
                                     name='npartitions',
                                     ptype='scalar')
+        self['time_col'] = place(data=self.time_col,
+                                 name='time_col',
+                                 ptype='scalar')
         self["probe_config"] = place(self.probe_config, 'dict', 'probe_config')
         self['recordings_bag'] = bag_dataframe(self['recordings'],
                                                self['npartitions'])
@@ -36,4 +41,5 @@ class ProbeDataframe(Pipeline):
                                 ptype='scalar')
         self["matches"] = probe_recordings(self["recordings_bag"],
                                            self["probe_config"],
-                                           self["id_type"])
+                                           self["id_type"]
+                                           self["time_col"])
