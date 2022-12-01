@@ -11,6 +11,7 @@ from yuntu import Audio
 from yuntu.collection.methods import collection
 from yuntu.core.pipeline.places import *
 from yuntu.core.pipeline import transition
+from yuntu.soundscape.utils import absolute_timing
 
 def write_probe_outputs(partition, probe_config, col_config, write_config, batch_size, overwrite=False):
     """Run probe on partition and write results"""
@@ -53,6 +54,58 @@ def write_probe_outputs(partition, probe_config, col_config, write_config, batch
 
     return rows
 
+def probe_all_timed(recording_rows, probe_config, time_col):
+    """Run probe row by row"""
+    probe_class = module_object(probe_config["module"])
+    probe_kwargs = probe_config["kwargs"]
+
+    if "annotate_args" in probe_config:
+        annotate_args = probe_config["annotate_args"]
+    else:
+        annotate_args = {}
+
+    all_annotations = []
+    count = 0
+    with probe_class(**probe_kwargs) as probe:
+        for row in recording_rows:
+            rid = row["id"]
+            path = row["path"]
+            duration = row["duration"]
+            timeexp = row["timeexp"]
+            samplerate = row["samplerate"]
+            time_utc = row[time_col]
+
+            prev_annotations = []
+            if "annotations" in row:
+                prev_annotations = row["annotations"]
+
+            if "meta_arg_extractor" in probe_config:
+                extractor_config = probe_config["meta_arg_extractor"]
+                if "kwargs" in extractor_config:
+                    arg_extractor = module_object(extractor_config["module"])(**extractor_config["kwargs"])
+                else:
+                    arg_extractor = module_object(extractor_config["module"])
+
+                annotate_args.update(arg_extractor(row))
+
+            with Audio(path=path, duration=duration, samplerate=samplerate, timeexp=timeexp, annotations=prev_annotations) as audio:
+                annotations = probe.annotate(audio, **annotate_args)
+
+            for i in range(len(annotations)):
+                annotations[i]["recording"] = rid
+                annotations[i]["labels"] = json.dumps(annotations[i]["labels"])
+                annotations[i]["metadata"] = json.dumps(annotations[i]["metadata"])
+                annotations[i]["classtype"] = "TimedAnnotation"
+                annotations[i]["abs_start_time"] = absolute_timing(time_utc, annotations[i]["start_time"])
+                annotations[i]["abs_end_time"] = absolute_timing(time_utc, annotations[i]["end_time"])
+                all_annotations.append(annotations[i])
+
+            count += 1
+            if count % 10 == 0:
+                gc.collect()
+
+    return all_annotations
+
 def probe_all(recording_rows, probe_config):
     """Run probe row by row"""
     probe_class = module_object(probe_config["module"])
@@ -93,6 +146,7 @@ def probe_all(recording_rows, probe_config):
                 annotations[i]["recording"] = rid
                 annotations[i]["labels"] = json.dumps(annotations[i]["labels"])
                 annotations[i]["metadata"] = json.dumps(annotations[i]["metadata"])
+                annotations[i]["classtype"] = "Annotation"
                 all_annotations.append(annotations[i])
 
             count += 1
@@ -217,8 +271,8 @@ def probe_annotate(partitions, probe_config, col_config):
 
 
 @transition(name="probe_recordings", outputs=["matches"], persist=True,
-            signature=((DynamicPlace, DictPlace, ScalarPlace), (DaskDataFramePlace,)))
-def probe_recordings(recordings_bag, probe_config, id_type='int'):
+            signature=((DynamicPlace, DictPlace, ScalarPlace, ScalarPlace), (DaskDataFramePlace,)))
+def probe_recordings(recordings_bag, probe_config, id_type='int', time_col=None):
     """Run probe and annotate bag of recording rows."""
 
     meta = [('recording', np.dtype(id_type)),
@@ -229,9 +283,17 @@ def probe_recordings(recordings_bag, probe_config, id_type='int'):
             ('type', np.dtype('O')),
             ('metadata', np.dtype('O')),
             ('geometry', np.dtype('O')),
-            ('labels', np.dtype('O'))]
+            ('labels', np.dtype('O')),
+            ('classtype', np.dtype('O'))]
 
-    results = recordings_bag.map(probe_all,
-                                 probe_config=probe_config).flatten()
+    if time_col is not None:
+        meta = meta +[("abs_start_time", np.dtype('datetime64[ns]')),
+                      ("abs_end_time", np.dtype('datetime64[ns]'))]
+        results = recordings_bag.map(probe_all_timed,
+                                     probe_config=probe_config,
+                                     time_col=time_col).flatten()
+    else:
+        results = recordings_bag.map(probe_all,
+                                     probe_config=probe_config).flatten()
 
     return results.to_dataframe(meta=meta)
