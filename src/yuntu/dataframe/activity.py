@@ -40,11 +40,11 @@ class ActivityAccessor:
             raise ValueError(message)
 
     def diversity(self, div_type="Shannon", component="alpha", labels=None):
-        if component == "gamma":
-            return diversity(self._obj.sum().values, div_type=div_type)
-
         if labels is None:
             labels = self.activity_columns
+ 
+        if component == "gamma":
+            return diversity(self._obj[labels].sum(), labels=labels, div_type=div_type)
 
         div = self._obj.apply(diversity, labels=labels, div_type=div_type, axis=1)
 
