@@ -1,4 +1,5 @@
 """Prebuilt t datastores for common cases."""
+
 import os
 from collections import OrderedDict
 import struct
@@ -11,7 +12,7 @@ from yuntu.core.audio.utils import hash_file, media_open
 from yuntu.core.database.recordings import ULTRASONIC_SAMPLERATE_THRESHOLD
 
 RIFF_ID_LENGTH = 4
-LENGTH_OF_COMMENT = 128
+LENGTH_OF_COMMENT = 256
 PCM_FORMAT = 1
 
 RIFF_FORMAT = f'{RIFF_ID_LENGTH}s'
@@ -155,7 +156,9 @@ def get_am_gain(comment):
     match = gain_regex.search(comment)
     if match is None:
         match = gain_regex_alt.search(comment)
-    return match.group(1)
+    if match is not None:
+        return match.group(1)
+    return None
 
 
 battery_regex = re.compile(r'battery state was (\d.\dV)')
@@ -165,11 +168,42 @@ def get_am_battery_state(comment):
     match = battery_regex.search(comment)
     if match is None:
         match = battery_regex_alt.search(comment)
-    return match.group(1)
+    if match is not None:
+        return match.group(1)
+    return None
 
+temperature_regex = re.compile(r'temperature was (\d{2}.\dC)')
 
+def get_am_temperture(comment):
+    match = temperature_regex.search(comment)
+    if match is not None:
+        return match.group(1)
+    return None
 
 class AudioMothStorage(Storage):
+
+    def get_recording_dataframe(self, with_annotations=False):
+        data = []
+        for datum in self.iter():
+            try:
+                rec_meta = self.prepare_datum(datum)
+            except:
+                print(f"Warning: Could not read header of {datum}, ignoring...")
+                rec_meta = None
+
+            if rec_meta is not None:
+                media_info = rec_meta.pop('media_info')
+                rec_meta.update(media_info)
+
+                if with_annotations:
+                    annotations = [self.prepare_annotation(datum, annotation)
+                                   for annotation in self.iter_annotations(datum)]
+                    annotations = [x for x in annotations if x is not None]
+                    rec_meta["annotations"] = annotations
+
+                data.append(rec_meta)
+
+        return pd.DataFrame(data)
 
     def iter_annotations(self, datum):
         return []
@@ -205,12 +239,14 @@ class AudioMothStorage(Storage):
         battery = get_am_battery_state(comment)
         gain = get_am_gain(comment)
         am_id = get_am_id(comment)
+        temperature = get_am_temperture(comment)
 
         metadata = {
             'am_id': am_id,
             'gain': gain,
             'battery': battery,
             'comment': comment,
+            'temperature': temperature
         }
 
         datetime_info = get_am_datetime(comment)
