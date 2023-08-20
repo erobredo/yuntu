@@ -178,9 +178,6 @@ def expand_label_column(df):
     labels = pd.DataFrame(labels.tolist(), index=labels.index)
     return pd.concat([df, labels], axis=1)
 
-def read(path, expand_labels=True, **kwargs):
-    '''Read annotations from path'''
-
     if path.endswith(".csv"):
         df = pd.read_csv(path,**kwargs)
     elif path.endswith(".parquet"):
@@ -301,8 +298,7 @@ class AnnotationAccessor:
                 .reset_index(level=-1, drop=True)
                 .reset_index())
 
-   
-   def get_spectral_activity(self, count_func=DEFAULT_COUNTER, time_unit=60, time_module=None, freq_limits=[0, 10000], freq_unit=100, target_labels=None, min_t=None, max_t=None, exclude=[]):
+    def get_spectral_activity(self, count_func=DEFAULT_COUNTER, time_unit=60, time_module=None, freq_limits=[0, 10000], freq_unit=100, target_labels=None, min_t=None, max_t=None, exclude=[]):
         """Compute counts by temporal and spectral range and return a dataframe that is compatible with sndscape accesor"""
 
         if "abs_start_time" not in self._obj.columns:
