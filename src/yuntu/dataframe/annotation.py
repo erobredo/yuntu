@@ -48,6 +48,48 @@ def buffer_geometry_clip(geom, radius):
     x = np.clip(x, 0, None)
     return Polygon(zip(x,y)).simplify(0)
 
+def disolve_file_annotations(group, key, join_meta_func=None):
+    '''Return disolved weak annotations within group'''
+
+    recording, label_str, dtype, classtype = group.name
+
+    if join_meta_func is not None:
+        metadata = join_meta_func(group.metadata.values)
+    else:
+        metadata = {}
+    
+    labels = None
+    for n, lab in group.labels.items():
+        llab = Labels.from_dict(lab)
+        if labels is None:
+            labels = llab
+            continue
+        for l in llab:
+            if l.key not in labels:
+                labels.add(l)
+
+    metadata["disolve"] = {
+        "members": list(group.id.values.astype(int)),
+        "group": {"key": key,
+                  "value": label_str}
+    }
+    
+    labels = labels.to_dict()
+
+    row = {
+        "geometry": 'POLYGON ((0 0, 0 10000000000000000, 10000000000000000 10000000000000000, 10000000000000000 0, 0 0))',
+        "start_time": None,
+        "end_time": None,
+        "max_freq": None,
+        "min_freq": None,
+        "labels": labels,
+        "metadata": metadata,
+        "classtype": "WeakAnnotation"
+    }
+
+    return pd.DataFrame([row])
+    
+
 def disolve_annotations(group, key, radius, join_meta_func=None, keep_radius=True):
     '''Return disolved annotations within group'''
 
@@ -211,19 +253,31 @@ class AnnotationAccessor:
             labels_column=labels_column,
             id_column=id_column)
 
-    def disolve(self, key, radius=(1.5, 0), join_meta_func=None, keep_radius=True):
+    def disolve(self, key, radius=(1.5, 0), join_meta_func=None, keep_radius=True, whole_file=False):
         '''Merge annotations by geometry and key'''
+       
+        if whole_file:
+            out = (self._obj
+                   .groupby(by=["recording", key, "type"], as_index=True)
+                   .apply(disolve_file_annotations, key=key, join_meta_func=join_meta_func)
+                   .reset_index(level=-1, drop=True)
+                   .reset_index())
+
+            out["type"] = "WeakAnnotation"
+
+            return out
 
         if len(self._obj.classtype.unique()) > 1:
-            raise ValueError("Can only disolve dataframes with homogeneous classtypes for now. Filter by classtype first.")
-
+            raise ValueError("Can only disolve dataframes with homogeneous classtypes. Filter by classtype first or use 'whole_file=True'.")
+        
         return (self._obj
                 .groupby(by=["recording", key, "type", "classtype"], as_index=True)
                 .apply(disolve_annotations, radius=radius, key=key, join_meta_func=join_meta_func, keep_radius=keep_radius)
                 .reset_index(level=-1, drop=True)
                 .reset_index())
 
-    def get_spectral_activity(self, count_func=DEFAULT_COUNTER, time_unit=60, time_module=None, freq_limits=[0, 10000], freq_unit=100, target_labels=None, min_t=None, max_t=None, exclude=[]):
+   
+   def get_spectral_activity(self, count_func=DEFAULT_COUNTER, time_unit=60, time_module=None, freq_limits=[0, 10000], freq_unit=100, target_labels=None, min_t=None, max_t=None, exclude=[]):
         """Compute counts by temporal and spectral range and return a dataframe that is compatible with sndscape accesor"""
 
         if "abs_start_time" not in self._obj.columns:

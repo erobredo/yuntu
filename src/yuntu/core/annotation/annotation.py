@@ -7,6 +7,17 @@ import yuntu.core.geometry as geom
 
 
 class Annotation(ABC):
+    """Base class for annotations.
+
+    This class is the base class for all annotations.
+
+    Parameters
+    ----------
+    labels : dict or Labels, optional
+    id : str, optional
+    metadata : dict, optional
+    geometry : shapely.geometry, optional
+    """
     name = None
     geometry_class = None
 
@@ -333,6 +344,29 @@ class Annotation(ABC):
 
 
 class WeakAnnotation(Annotation):
+    """ Weak annotation class.
+
+    Parameters
+    ----------
+    labels : Labels
+
+    id : str
+
+    metadata : dict
+
+
+    Attributes
+    ----------
+    labels : Labels
+
+    id : str
+
+    metadata : dict
+
+    geometry : Weak
+
+    """
+
     name = Annotation.Types.WEAK
     geometry_class = geom.Weak
 
@@ -344,6 +378,35 @@ class WeakAnnotation(Annotation):
 
 
 class TimeLineAnnotation(Annotation):
+    """ Time line annotation class.
+
+    Parameters
+    ----------
+    time : datetime.datetime
+
+    labels : Labels
+
+    id : str
+
+    metadata : dict
+
+    
+    Attributes
+    ----------
+
+    time : datetime.datetime
+
+    labels : Labels
+
+    id : str
+
+    metadata : dict
+
+    geometry : TimeLine
+
+    """
+
+
     name = Annotation.Types.TIME_LINE
     geometry_class = geom.TimeLine
 
@@ -355,23 +418,114 @@ class TimeLineAnnotation(Annotation):
 
 
 class TimeIntervalAnnotationMixin:
+    """ Time interval annotation mixin class.
+
+    Parameters
+    ----------
+
+    start_time : datetime.datetime
+
+    end_time : datetime.datetime
+
+    labels : Labels
+
+    id : str
+
+    metadata : dict
+
+
+    Attributes
+    ----------
+
+    start_time : datetime.datetime
+
+    end_time : datetime.datetime
+
+    labels : Labels
+
+    id : str
+
+    metadata : dict
+
+    geometry : TimeInterval
+
+    """
+
     def to_start_line(self):
+        """ Convert to start line annotation.
+
+        Returns
+        -------
+
+        TimeLineAnnotation
+
+        """
+
         data = self._copy_dict()
         data['geometry'] = self.geometry.to_start_line()
         return TimeLineAnnotation(**data)
 
     def to_end_line(self):
+        """ Convert to end line annotation.
+
+        Returns
+        -------
+
+        TimeLineAnnotation
+
+        """
+
         data = self._copy_dict()
         data['geometry'] = self.geometry.to_end_line()
         return TimeLineAnnotation(**data)
 
     def to_time_center_line(self):
+        """ Convert to time center line annotation.
+
+        Returns
+        -------
+
+        TimeLineAnnotation
+
+        """
         data = self._copy_dict()
         data['geometry'] = self.geometry.to_time_center_line()
         return TimeLineAnnotation(**data)
 
 
 class TimeIntervalAnnotation(TimeIntervalAnnotationMixin, Annotation):
+    """ Time interval annotation class.
+
+    Parameters
+    ----------
+    start_time : datetime.datetime
+
+    end_time : datetime.datetime
+
+    labels : Labels
+
+    id : str
+
+    metadata : dict
+
+
+    Attributes
+    ----------
+
+    start_time : datetime.datetime
+
+    end_time : datetime.datetime
+
+    labels : Labels
+
+    id : str
+
+    metadata : dict
+
+    geometry : TimeInterval
+
+    """
+
     name = Annotation.Types.TIME_INTERVAL
     geometry_class = geom.TimeInterval
 
@@ -385,6 +539,34 @@ class TimeIntervalAnnotation(TimeIntervalAnnotationMixin, Annotation):
 
 
 class FrequencyLineAnnotation(Annotation):
+    """ Frequency line annotation class.
+
+    Parameters
+    ----------
+    freq : float
+
+    labels : Labels
+
+    id : str
+
+    metadata : dict
+
+
+    Attributes
+    ----------
+
+    freq : float
+
+    labels : Labels
+
+    id : str
+
+    metadata : dict
+
+    geometry : FrequencyLine
+
+    """
+
     name = Annotation.Types.FREQUENCY_LINE
     geometry_class = geom.FrequencyLine
 
@@ -396,17 +578,72 @@ class FrequencyLineAnnotation(Annotation):
 
 
 class FrequencyIntervalAnnotationMixin:
+    """ Frequency interval annotation mixin class.
+
+    Parameters
+    ----------
+    min_freq : float
+
+    max_freq : float
+
+    labels : Labels
+
+    id : str
+
+    metadata : dict
+
+
+    Attributes
+    ----------
+
+    min_freq : float
+
+    max_freq : float
+
+    labels : Labels
+
+    id : str
+
+    metadata : dict
+
+    geometry : FrequencyInterval
+
+    """
     def to_min_line(self):
+        """ Convert to min line annotation.
+
+        Returns
+        -------
+
+        FrequencyLineAnnotation
+
+        """
         data = self._copy_dict()
         data['geometry'] = self.geometry.min_line
         return FrequencyLineAnnotation(**data)
 
     def to_max_line(self):
+        """ Convert to max line annotation.
+
+        Returns
+        -------
+
+        FrequencyLineAnnotation
+
+        """
         data = self._copy_dict()
         data['geometry'] = self.geometry.to_max_line()
         return FrequencyLineAnnotation(**data)
 
     def to_freq_center_line(self):
+        """ Convert to frequency center line annotation.
+
+        Returns
+        -------
+
+        FrequencyLineAnnotation
+
+        """
         data = self._copy_dict()
         data['geometry'] = self.geometry.to_freq_center_line()
         return FrequencyLineAnnotation(**data)

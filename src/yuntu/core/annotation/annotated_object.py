@@ -10,7 +10,41 @@ from yuntu.core.annotation.annotation import Annotation
 
 
 class AnnotationList(list):
+    """List of annotations.
+    
+    This class is a list of annotations. It provides
+    some convenience methods for working with lists
+    of annotations.
+
+    Parameters
+    ----------
+    annotations : list of Annotation, optional
+
+    Attributes
+    ----------
+    annotations : list of Annotation
+
+    Methods
+    -------
+    to_dict()
+
+    add(annotation=None, geometry=None, labels=None, metadata=None, id=None)
+
+    add_multiple(annotations)
+
+    to_dataframe()
+
+    plot(ax=None, **kwargs)
+
+    buffer(buffer=None, **kwargs)
+
+    apply(func)
+
+    filter(func)
+
+    """
     def to_dict(self):
+        """Produce list of dictionaries from AnnotationList."""
         return [
             annotation.to_dict() for annotation in self
         ]
@@ -22,7 +56,17 @@ class AnnotationList(list):
             labels=None,
             metadata=None,
             id=None):
-        """Append annotation to AnnotationList."""
+        """Append annotation to AnnotationList.
+
+        Parameters
+        ----------
+
+        annotation : Annotation or dict, optional
+        geometry : shapely.geometry, optional   
+        labels : dict, optional
+        metadata : dict, optional
+        id : str, optional
+        """
         if annotation is None:
             annotation = Annotation(
                 geometry=geometry,
@@ -36,7 +80,12 @@ class AnnotationList(list):
         self.append(annotation)
 
     def add_multiple(self, annotations):
-        """Append annotations to AnnotationList."""
+        """Append annotations to AnnotationList.
+
+        Parameters
+        ----------
+        annotations : list of Annotation or dict
+        """
         for annotation in annotations:
             if not isinstance(annotation, Annotation):
                 annotation = Annotation.from_dict(annotation)
@@ -44,7 +93,12 @@ class AnnotationList(list):
             self.append(annotation)
 
     def to_dataframe(self):
-        """Produce pandas DataFrame from AnnotationList."""
+        """Produce pandas DataFrame from AnnotationList.
+
+        Returns
+        -------
+        pandas.DataFrame        
+        """
         data = []
         for annotation in self:
             row = {
@@ -62,7 +116,13 @@ class AnnotationList(list):
         return pd.DataFrame(data)
 
     def plot(self, ax=None, **kwargs):
-        """Plot all annotations."""
+        """Plot all annotations.
+        
+        Parameters
+        ----------
+        ax : matplotlib.axes, optional
+        **kwargs : dict, optional
+        """
         import matplotlib.pyplot as plt
 
         if ax is None:
@@ -80,19 +140,54 @@ class AnnotationList(list):
         return ax
 
     def buffer(self, buffer=None, **kwargs):
+        """Return new AnnotationList with buffered annotations.
+
+        Parameters
+        ----------
+        buffer : float, optional
+        **kwargs : dict, optional
+
+        Returns
+        -------
+        AnnotationList
+        """
+
+        if buffer is None:
+            buffer = kwargs.get('buffer', 0)
+
         annotations = [
             annotation.buffer(buffer=buffer, **kwargs)
             for annotation in self]
         return AnnotationList(annotations)
 
     def apply(self, func):
+        """Return new AnnotationList with applied function.
+
+        Parameters
+        ----------
+        func : function
+
+        Returns
+        -------
+        AnnotationList
+        """
+
         annotations = [
             func(annotation) for annotation
             in self]
         return AnnotationList(annotations)
 
     def filter(self, func):
-        """Return new AnnotationList with filtered annotations."""
+        """Return new AnnotationList with filtered annotations.
+
+        Parameters
+        ----------
+        func : function
+
+        Returns
+        -------
+        AnnotationList
+        """
         annotations = [
             annotation for annotation in self
             if func(annotation)]
@@ -100,6 +195,30 @@ class AnnotationList(list):
 
 
 class AnnotatedObjectMixin:
+    """Annotated Object Mixin.
+
+    This Mixin can be given to all objects that posses
+    annotations. It provides some convenience methods
+    for working with annotations.
+
+    Parameters
+    ----------
+    annotations : list of Annotation, optional
+    filter_annotations : bool, optional
+    
+    Attributes
+    ----------
+    annotations : AnnotationList
+
+    Methods
+    -------
+    to_dict()
+
+    _cast_annotations(annotations)
+
+    _filter_annotations(annotation_list)
+
+    """
     def __init__(
             self,
             annotations=None,
@@ -121,12 +240,18 @@ class AnnotatedObjectMixin:
         super().__init__()
 
     def to_dict(self):
+        """Produce dictionary from AnnotatedObjectMixin."""
+
         return {
             'annotations': self.annotations.to_dict()
         }
 
     @staticmethod
     def _cast_annotations(annotations):
+
+        if annotations is None:
+            return []
+
         new_annotations = []
         for annotation in annotations:
             if not isinstance(annotation, Annotation):
@@ -160,6 +285,23 @@ class AnnotatedObjectMixin:
             labels=None,
             metadata=None,
             id=None):
+        """Add annotation to AnnotatedObjectMixin.
+
+        Parameters
+        ----------
+        annotation : Annotation or dict, optional
+        geometry : shapely.geometry, optional
+        labels : dict, optional
+        metadata : dict, optional
+        id : str, optional
+        """
+        if annotation is None:
+            annotation = Annotation(
+                geometry=geometry,
+                labels=labels,
+                metadata=metadata,
+                id=id)
+
         self.annotations.add(
             annotation=annotation,
             geometry=geometry,
@@ -168,9 +310,24 @@ class AnnotatedObjectMixin:
             id=id)
 
     def add_annotations(self, annotations):
+        """Add annotations to AnnotatedObjectMixin.
+
+        Parameters
+        ----------
+        annotations : list of Annotation or dict
+        """
+        
         self.annotations.add_multiple(annotations)
 
     def plot(self, ax=None, **kwargs):
+        """Plot all annotations.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes, optional
+        **kwargs : dict, optional
+        """
+
         import matplotlib.pyplot as plt
 
         if ax is None:
