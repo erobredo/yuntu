@@ -171,6 +171,31 @@ def disolve_annotations(group, key, radius, join_meta_func=None, keep_radius=Tru
 
     return pd.DataFrame(rows)
 
+def expand_label_column(df):
+    '''Expand label column to multiple columns'''
+    labels = df.labels.apply(lambda x: Labels.from_dict(x))
+    labels = labels.apply(lambda x: x.to_dict())
+    labels = pd.DataFrame(labels.tolist(), index=labels.index)
+    return pd.concat([df, labels], axis=1)
+
+def read(path, expand_labels=True, **kwargs)):
+    '''Read annotations from path'''
+
+    if path.endswith(".csv"):
+        df = pd.read_csv(path,**kwargs)
+    elif path.endswith(".parquet"):
+        df = pd.read_parquet(path,**kwargs)
+    else:
+        raise ValueError("Unknown file format")
+
+    df["metadata"] = df.metadata.apply(lambda x: json.loads(x))
+    df["labels"] = df.labels.apply(lambda x: json.loads(x))
+
+    if expand_labels:
+        df = expand_label_column(df)
+
+    return df
+
 @pd.api.extensions.register_dataframe_accessor("annotation")
 class AnnotationAccessor:
     type_column = TYPE
