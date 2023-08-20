@@ -53,7 +53,7 @@ def buffer_geometry_clip(geom, radius):
 def disolve_file_annotations(group, key, join_meta_func=None):
     '''Return disolved weak annotations within group'''
 
-    recording, label_str, dtype, classtype = group.name
+    recording, label_str, dtype = group.name
 
     if join_meta_func is not None:
         metadata = join_meta_func(group.metadata.values)
