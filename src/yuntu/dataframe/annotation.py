@@ -176,8 +176,11 @@ def expand_label_column(df):
     labels = df.labels.apply(lambda x: Labels.from_dict(x))
     labels = labels.apply(lambda x: x.to_dict())
     labels = pd.DataFrame(labels.tolist(), index=labels.index)
+    
     return pd.concat([df, labels], axis=1)
 
+def read_annotations(path, expand_labels=True, **kwargs):
+    '''Read annotations from file'''
     if path.endswith(".csv"):
         df = pd.read_csv(path,**kwargs)
     elif path.endswith(".parquet"):
