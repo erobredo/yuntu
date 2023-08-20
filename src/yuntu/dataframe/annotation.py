@@ -2,7 +2,6 @@
 
 An audio dataframe is a
 """
-import json
 import datetime
 import numpy as np
 import pandas as pd
@@ -11,6 +10,7 @@ import shapely.wkt
 from shapely.ops import unary_union
 from shapely.geometry import Polygon, box
 
+from yuntu.soundscape.utils import parse_json
 from yuntu.core.utils.atlas import buffer_geometry
 from yuntu.core.annotation.labels import Labels
 from yuntu.core.annotation.annotation import Annotation
@@ -180,18 +180,31 @@ def expand_label_column(df):
 
     return pd.concat([df, labels], axis=1)
 
-def read_annotations(path, expand_labels=True, **kwargs):
-    '''Read annotations from file'''
+def read_dataframe(path, expand_labels=True, **kwargs):
+    '''Read annotations from file
+
+    Parameters
+    ----------
+    path : str
+
+    expand_labels : bool
+
+    **kwargs : dict
+
+    Returns
+    -------
+    df : pd.DataFrame
+    '''
+
     if path.endswith(".csv"):
         df = pd.read_csv(path,**kwargs)
     elif path.endswith(".parquet"):
         df = pd.read_parquet(path,**kwargs)
     else:
         raise ValueError("Unknown file format")
-
-    df["metadata"] = df.metadata.apply(lambda x: json.loads(x))
-    df["labels"] = df.labels.apply(lambda x: json.loads(x))
-
+    
+    df = df.apply(lambda x: parse_json(x, ["labels", "metadata"]), axis=1)
+    
     if expand_labels:
         df = expand_label_column(df)
 

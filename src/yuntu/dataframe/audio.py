@@ -44,6 +44,34 @@ def to_calendar(row):
                       'abs_start_time': abs_start_time,
                       'abs_end_time': abs_end_time})
 
+def read_dataframe(path, **kwargs):
+    """Read a dataframe from a file
+
+    Parameters
+    ----------
+    path : str
+
+    Returns
+    -------
+    df : pd.DataFrame
+    """
+    if path.endswith('.csv'):
+        df = pd.read_csv(path, **kwargs)
+    elif path.endswith('.parquet'):
+        df = pd.read_parquet(path, **kwargs)
+
+    if 'time_utc' not in df.columns:
+        raise ValueError('Dataframe must have a time_utc column')
+
+    df['time_utc'] = pd.to_datetime(df['time_utc'])
+
+    if 'metadata' in df.columns:
+        df = df.apply(lambda x: parse_json(x, ["metadata"]), axis=1)
+    else:
+        df["metadata"] = df.apply(lambda x: {}, axis=1)
+
+    return df
+
 
 @pd.api.extensions.register_dataframe_accessor("audio")
 class AudioAccessor:
