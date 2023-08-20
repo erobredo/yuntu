@@ -175,10 +175,9 @@ def disolve_annotations(group, key, radius, join_meta_func=None, keep_radius=Tru
 
 def expand_label_column(df):
     '''Expand label column to multiple columns'''
-    labels = df.labels.apply(lambda x: Labels.from_dict(x))
-    labels = labels.apply(lambda x: x.to_dict())
+    labels = df.labels.apply(lambda x: {l["key"]: l["value"] for l in x})
     labels = pd.DataFrame(labels.tolist(), index=labels.index)
-    
+
     return pd.concat([df, labels], axis=1)
 
 def read_annotations(path, expand_labels=True, **kwargs):
