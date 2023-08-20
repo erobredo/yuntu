@@ -178,7 +178,7 @@ def expand_label_column(df):
     labels = pd.DataFrame(labels.tolist(), index=labels.index)
     return pd.concat([df, labels], axis=1)
 
-def read(path, expand_labels=True, **kwargs)):
+def read(path, expand_labels=True, **kwargs):
     '''Read annotations from path'''
 
     if path.endswith(".csv"):
