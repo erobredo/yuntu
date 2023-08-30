@@ -86,7 +86,7 @@ def disolve_file_annotations(group, key, join_meta_func=None):
         "min_freq": None,
         "labels": labels,
         "metadata": metadata,
-        "classtype": "WeakAnnotation"
+        "type": "WeakAnnotation"
     }
 
     return pd.DataFrame([row])
