@@ -391,7 +391,7 @@ class Audio(TimeMedia):
             path = self.path
         return read_info(path, self.timeexp)
 
-    def load_from_path(self, path=None):
+    def load_from_path(self, path=None, res_type="kaiser_fast", **read_kwargs):
         """Read signal from file.
 
         Parameters
@@ -419,7 +419,10 @@ class Audio(TimeMedia):
             path,
             self.samplerate,
             offset=start,
-            duration=duration)
+            res_type=res_type,
+            duration=duration,
+            **read_kwargs
+        )
 
         if hasattr(self, '_buffer'):
             self._buffer.close()
