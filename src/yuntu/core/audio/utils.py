@@ -480,8 +480,8 @@ def resample(
     """
     return librosa.core.resample(
         array,
-        original_sr,
-        target_sr,
+        orig_sr=original_sr,
+        target_sr=target_sr,
         res_type=res_type,
         fix=fix,
         scale=scale,
