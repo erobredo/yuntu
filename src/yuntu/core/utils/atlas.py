@@ -1,6 +1,6 @@
 """Utilities for geometry manipulation."""
 import math
-
+import warnings
 import numpy as np
 from scipy.signal import convolve2d
 from skimage.draw import polygon, line, circle
@@ -142,6 +142,15 @@ def geom_from_wkt(wkt):
     try:
         geom = shapely.wkt.loads(wkt)
     except Exception as e:
+        if "LINESTRING" in wkt:
+            coords = wkt.replace("(", "").replace(")", "").replace("LINESTRING", "")
+            if len(coords.split(",")) == 1:
+                warnings.warn(f"Line '{wkt}' only has one point. Adding a nearby point to produce a valid LINESTRING.")
+                coord1, coord2 = coords.split(" ")
+                coord1 = float(coord1)+1e-09
+                coord2 = float(coord2)+1e-09
+                new_wkt = f"LINESTRING({coords},{coord1} {coord2})"
+                return geom_from_wkt(new_wkt)
         geom = None
         raise ValueError("Wrong wkt", wkt)
     return geom
