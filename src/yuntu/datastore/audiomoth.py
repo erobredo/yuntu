@@ -6,6 +6,7 @@ import struct
 import re
 import pytz
 from datetime import datetime
+import pandas as pd
 
 from yuntu.datastore.base import Storage
 from yuntu.core.audio.utils import hash_file, media_open
