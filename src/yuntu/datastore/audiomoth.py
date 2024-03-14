@@ -174,9 +174,12 @@ def get_am_battery_state(comment):
     return None
 
 temperature_regex = re.compile(r'temperature was (\d{2}.\dC)')
+temperature_regex_alt = re.compile(r'temperature was (\d{1}.\dC)')
 
 def get_am_temperture(comment):
     match = temperature_regex.search(comment)
+    if match is None:
+        match = temperature_regex_alt.search(comment)
     if match is not None:
         return match.group(1)
     return None
