@@ -3,7 +3,7 @@ import math
 import warnings
 import numpy as np
 from scipy.signal import convolve2d
-from skimage.draw import polygon, line, circle
+from skimage.draw import polygon, line, ellipse as circle
 import matplotlib.pyplot as plt
 import shapely.wkt
 from shapely.geometry import box
