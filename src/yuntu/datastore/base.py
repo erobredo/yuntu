@@ -189,10 +189,10 @@ class Storage(Datastore):
 
     def iter(self):
         if self.tqdm is not None:
-            for fname in self.tqdm(ag_glob(os.path.join(self.dir_path,'*.WAV'))+ag_glob(os.path.join(self.dir_path, '*.wav'))):
+            for fname in self.tqdm(ag_glob(os.path.join(self.dir_path,'*.WAV'))):
                 yield fname
         else:
-            for fname in ag_glob(os.path.join(self.dir_path, '*.WAV'))+ag_glob(os.path.join(self.dir_path, '*.wav')):
+            for fname in ag_glob(os.path.join(self.dir_path, '*.WAV')):
                 yield fname
 
     def prepare_datum(self, datum):
