@@ -13,7 +13,10 @@ SPATIAL_CAPABLE_PROVIDERS = ["sqlite", "postgres"]
 def create_sqlite_spatial_structure(db):
     con = db.get_connection()
     con.enable_load_extension(True)
-    db.execute('''SELECT load_extension('mod_spatialite.so')''')
+    if os.name == "nt":
+        db.execute('''SELECT load_extension('mod_spatialite.dll')''')
+    else:
+        db.execute('''SELECT load_extension('mod_spatialite.so')''')
     db.execute('''SELECT InitSpatialMetaData()''')
     db.execute('''SELECT AddGeometryColumn('recording','geom' , 4326, 'POINT', 2)''')
     db.execute('''SELECT CreateSpatialIndex('recording', 'geom');''')
