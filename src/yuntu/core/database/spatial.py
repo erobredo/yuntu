@@ -1,4 +1,5 @@
 '''Geo-spatial database manager.'''
+import os
 from pony.orm import db_session
 from pony.orm.dbapiprovider import ProgrammingError
 from psycopg2.errors import DuplicateColumn
